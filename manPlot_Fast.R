@@ -1,6 +1,7 @@
 #!/usr/bin/env Rscript
 # pluta 9/18/18
 
+library(data.table)
 library(qqman)
 
 # script to create manhattan plot of either a single chromosome of the whole genome
@@ -38,11 +39,12 @@ MANOUTFILE <- paste(OUTFILE, "_man.png", sep="")
 
 print("reading association testing data...")
 
-dat <- read.table(INFILE, header=TRUE)
+dat <- fread(INFILE, header=TRUE)
+dat <- as.data.frame(dat)
 
 # check input validity
 # important for consistency with locuszoom
-if( colnames(dat)[1] != "MarkerName"))
+if( colnames(dat)[1] != "MarkerName")
 {
 	stop("Colnames of INFILE should be 'MarkerName' and 'P-value' ")
 }
