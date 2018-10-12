@@ -1,9 +1,15 @@
-#!/usr/bin/env Rscript
+
 
 # BRADtools update, pluta 10/6/18
 # v1.0: john pluta & kara maxwell 11/7/2016
 
 
+# example usage:
+# sub.id = "subX"
+# ploidy.dat <- read.table("653-Brca2Br32-T.seqz_confints_CP.txt", header = T)
+# seq.dat <- read.table("653-Brca2Br32-T.seqz_segments.txt",  header = T)
+
+# hrd.dat = getHRD.Data( sub.id, seq.dat, ploidy.dat )
 options(error=dump.frames)
 
 
@@ -156,11 +162,18 @@ getNtAIm <- function(seq.dat)
   HRD.NtAIm <- sum(seq.dat$HRD.NtAIm)
   return(HRD.NtAIm)
 }
-# ------------------------------------------------------------------------------- #
+# --------------------------------------------------------------------------------- #
 
 
-# ------------------------------------------------------------------------------------- #
+# ---------------------------------- getHRD.Data ---------------------------------- #
 getHRD.Data <- function( sub.id, seq.dat, ploidy.dat )
+  # script to setup data structures for HRD analysis
+  # input: sub.id (character)
+  #        seq.dat, a data.frame with columns: 
+  #           chromosome, start.pos, end.pos, CNt, alleleA, alleleB
+  #        ploidy.dat, a data.frame with columns:
+  #           cellularity, ploidy.estimate, ploidy.mean.cn
+  # output: hrd.dat, a data.frame with all of the calculated HRD scores
 {
   
   levels(seq.dat$chromosome) <- levels(ref.dat$chromosome)
@@ -184,7 +197,7 @@ getHRD.Data <- function( sub.id, seq.dat, ploidy.dat )
   
   
   main.CN <- rep(0, length(unique(seq.dat$chromosome)))
-
+  
   ct1 <- 0
   for( chr in unique(seq.dat$chromosome))
   {
@@ -218,51 +231,11 @@ getHRD.Data <- function( sub.id, seq.dat, ploidy.dat )
   # compute HRD stats, and record along with id
   m <- dim(hrd.dat)[2]
   hrd.dat[,2:m] = round(hrd.stats(seq.dat, ploidy.dat, CN.dat),3)
-
+  
   return(hrd.dat)
 }
 # ------------------------------------------------------------------------------------- #
 
-
-
-
-
 # ------------------------------------------------------------------------------------- #
-# -------------------------------------- main ----------------------------------------- #
+# ----------------------------------- end functions ----------------------------------- #
 # ------------------------------------------------------------------------------------- #
-
-# -- ploidy file --
-# ploidy varies by tumor, not by subject- should only need one per tumor group
-# should have columns "cellularity ploidy.estimates ploidy.mean.cn"
-# ex: 653-Brca2Br32-T.seqz_confints_CP.txt from sequenza
-
-# -- seq file --
-# seq data file should have columns 
-# eg 653-Brca2Br32-T.seqz_segments.txt from sequenza
-
-args = commandArgs(trailingOnly = TRUE)
-if(length(args) < 3)
-{
-  print("need to provide 3 arguments:")
-  print("1: sub.id = character string, the subject ID")
-  print("2: seq.dat   = the sequencing data, a data.frame with columns: chromosome, start.pos, end.pos, CNt, A, B")
-  print("3: ploidy.dat  = the ploidy data, a data.frame with columns: cellularity ploidy.estimates ploidy.mean.cn")
-  stop()
-}
-
-# example usage:
-# sub.id = "subX"
-# ploidy.dat <- read.table("653-Brca2Br32-T.seqz_confints_CP.txt", header = T)
-# seq.dat <- read.table("653-Brca2Br32-T.seqz_segments.txt",  header = T)
-
-# hrd.dat = getHRD.Data( sub.id, seq.dat, ploidy.dat )
-
-
-
-
-
-
-
-
-
-
