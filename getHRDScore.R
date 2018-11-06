@@ -18,7 +18,7 @@ options(error=dump.frames)
 # ================================ constants ========================================== #
 # ===================================================================================== #
 # the columns needed for an analysis, per standard sequenza naming conventions - you can change this
-# to whatever colnames you use
+# to whatever colnames you use)
 seq.cols.needed = c("chromosome", "start.pos", "end.pos", "CNt", "A", "B")
 
 # predefined data about chromosome size, centromere, and telomere location
@@ -67,7 +67,7 @@ hrd.stats <- function(seq.dat, ploidy.dat, CN.dat)
   # matches reference data to the correct chromosome in the subject data
   key = match(seq.dat$chromosome, ref.dat$chromosome)
   
-  # check the sequenza input to make sure it has the data we need
+  # check the sequencing data input to make sure it has the data we need
   if( any(!(seq.cols.needed %in% colnames(seq.dat))))
   {
     print(paste("column", 
@@ -82,6 +82,7 @@ hrd.stats <- function(seq.dat, ploidy.dat, CN.dat)
   seq.dat$chr.size <- ref.dat$chr.size[match(seq.dat$chromosome, ref.dat$chromosome)]
   
   # HRD-LOH calculation
+  # loss of heterozygosity
   # if B == 0 & s > 15000mbp & within chromosome, then HRD-LOH is TRUE
   seq.dat$LOH <- seq.dat$B == 0
   seq.dat$sub.chr <- (seq.dat$s / seq.dat$chr.size) < .9
@@ -90,6 +91,7 @@ hrd.stats <- function(seq.dat, ploidy.dat, CN.dat)
   HRD.LOH = sum(seq.dat$HRD.LOH)
   
   # HRD-NtAI calculation
+  # non-transcriptome allelic imbalance
   seq.dat$AI <- (seq.dat$A > seq.dat$B) & (seq.dat$A != 1) & (seq.dat$B != 0)
   
   seq.dat$start.arm <- seq.dat$end.arm <- rep("NA", dim(seq.dat)[1])
@@ -152,6 +154,7 @@ hrd.stats <- function(seq.dat, ploidy.dat, CN.dat)
 
 # ------------------------------- getNtAIm --------------------------------------- #
 # function to get NtAI without including main CNt segments
+# non-telomeric allelic imbalance
 getNtAIm <- function(seq.dat)
   # input:
   #   seq.dat (data.frame), the sequencing data (eg, .seqz_segments.txt)
