@@ -120,7 +120,7 @@ hrd.stats <- function(seq.dat, ploidy.dat, CN.dat)
   }
   
   HRD.NtAIm <- getNtAI(seq.dat[-rm.ind,])
-  HRD.TAIM <- getTAIM(seq.dat)
+  HRD.TAI <- getTAI(seq.dat)
   
   # HRD-LST
   # large state transition
@@ -134,7 +134,7 @@ hrd.stats <- function(seq.dat, ploidy.dat, CN.dat)
   # difference between m and r for each?
   # does it go into HRD.TOTAL
   out = data.frame(HRD.LOH=HRD.LOH, 
-                   HRD.TAIM =HRD.TAIM,
+                   HRD.TAI =HRD.TAI,
                    HRD.NtAIr=HRD.NtAIr,
                    HRD.NtAIm=HRD.NtAIm,
                    HRD.LSTm=HRD.LSTm, 
@@ -157,14 +157,14 @@ hrd.stats <- function(seq.dat, ploidy.dat, CN.dat)
 
 
 # ------------------------------- getTAIM --------------------------------------- #
-getTAIM <- function(seq.dat)
+getTAI <- function(seq.dat)
 {
   # seq.dat$s: length of the segment
-  seq.dat$HRD.TAIm <- (seq.dat$s > 11000000 & seq.dat$AI & !seq.dat$cross.arm 
+  seq.dat$HRD.TAI <- (seq.dat$s > 11000000 & seq.dat$AI & !seq.dat$cross.arm 
                           & (seq.dat$post.telomere | seq.dat$pre.telomere))
          
-  HRD.TAIm <- sum(seq.dat$HRD.TAIm)
-  return(HRD.TAIm)
+  HRD.TAI <- sum(seq.dat$HRD.TAI)
+  return(HRD.TAI)
 }
 # ------------------------------------------------------------------------------- #
 
