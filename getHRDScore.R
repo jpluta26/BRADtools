@@ -109,8 +109,7 @@ hrd.stats <- function(seq.dat, ploidy.dat, CN.dat)
   seq.dat$post.telomere <- (seq.dat$start.pos - ref.dat$p.telomere.end[key] <= 1000)
   seq.dat$pre.telomere  <- (ref.dat$q.telomere.start[key] - seq.dat$end.pos <= 1000)
   
-  seq.dat$HRD.NtAIr <- (seq.dat$s > 11000000 & seq.dat$AI & !seq.dat$cross.arm & !seq.dat$post.telomere & !seq.dat$pre.telomere)
-  HRD.NtAIr = sum(seq.dat$HRD.NtAIr)
+  HRD.NtAIr <- getNtAI(seq.dat)
   
   # create an index of main.CN segments; these get removed
   rm.ind <- c()
@@ -120,17 +119,22 @@ hrd.stats <- function(seq.dat, ploidy.dat, CN.dat)
     rm.ind <- c(rm.ind, which(seq.dat$chromosome == CN.dat$chromosome[i] & seq.dat$CNt == CN.dat$main.CN[i]))
   }
   
-  HRD.NtAIm <- getNtAIm(seq.dat[-rm.ind,])
-  
+  HRD.NtAIm <- getNtAI(seq.dat[-rm.ind,])
+  HRD.TAIM <- getTAIM(seq.dat)
   
   # HRD-LST
+  # large state transition
   seq.dat$brk.on.arm <- paste(seq.dat$chromosome, seq.dat$start.arm, seq.dat$end.arm, sep="")
   n.segs <- length(seq.dat$brk.on.arm[seq.dat$s > 3000000])
   n.breaks <- n.segs - length(unique(seq.dat$brk.on.arm)) + 1
   HRD.LSTm = n.breaks - (15.5 * ploidy.dat$ploidy.estimate[2])
   HRD.LSTr = n.breaks
   
+  # should HRD.TAI be normalized?
+  # difference between m and r for each?
+  # does it go into HRD.TOTAL
   out = data.frame(HRD.LOH=HRD.LOH, 
+                   HRD.TAIM =HRD.TAIM,
                    HRD.NtAIr=HRD.NtAIr,
                    HRD.NtAIm=HRD.NtAIm,
                    HRD.LSTm=HRD.LSTm, 
@@ -152,18 +156,30 @@ hrd.stats <- function(seq.dat, ploidy.dat, CN.dat)
 # ------------------------------------------------------------------------------- #
 
 
-# ------------------------------- getNtAIm --------------------------------------- #
+# ------------------------------- getTAIM --------------------------------------- #
+getTAIM <- function(seq.dat)
+{
+  # seq.dat$s: length of the segment
+  seq.dat$HRD.TAIm <- (seq.dat$s > 11000000 & seq.dat$AI & !seq.dat$cross.arm 
+                          & (seq.dat$post.telomere | seq.dat$pre.telomere))
+         
+  HRD.TAIm <- sum(seq.dat$HRD.TAIm)
+  return(HRD.TAIm)
+}
+# ------------------------------------------------------------------------------- #
+
+
+# ------------------------------- getNtAI --------------------------------------- #
 # function to get NtAI without including main CNt segments
 # non-telomeric allelic imbalance
-getNtAIm <- function(seq.dat)
+getNtAI <- function(seq.dat)
   # input:
   #   seq.dat (data.frame), the sequencing data (eg, .seqz_segments.txt)
   # output:
   #   HRD.NtAIm (numeric)
 {
-  seq.dat$HRD.NtAIm <- (seq.dat$s > 11000000 & seq.dat$AI & !seq.dat$cross.arm & !seq.dat$post.telomere & !seq.dat$pre.telomere)
-  HRD.NtAIm <- sum(seq.dat$HRD.NtAIm)
-  return(HRD.NtAIm)
+  HRD.NtAI <- sum(seq.dat$s > 11000000 & seq.dat$AI & !seq.dat$cross.arm & !seq.dat$post.telomere & !seq.dat$pre.telomere)
+  return(HRD.NtAI)
 }
 # --------------------------------------------------------------------------------- #
 
