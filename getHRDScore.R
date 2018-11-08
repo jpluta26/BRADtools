@@ -2,7 +2,7 @@
 
 # BRADtools update, pluta 10/6/18
 # v1.0: john pluta & kara maxwell 11/7/2016
-
+# citation: Maxwell et al. BRCA locus specific loss of heterozygosity in germline BRCA1 and BRCA2 carriers. 2017. Nat Comm 8(1):319.
 
 # example usage:
 # sub.id = "subX"
@@ -90,8 +90,7 @@ hrd.stats <- function(seq.dat, ploidy.dat, CN.dat)
   
   HRD.LOH = sum(seq.dat$HRD.LOH)
   
-  # HRD-NtAI calculation
-  # non-transcriptome allelic imbalance
+  # define allelic imbalance (AI), telomere positions
   seq.dat$AI <- (seq.dat$A > seq.dat$B) & (seq.dat$A != 1) & (seq.dat$B != 0)
   
   seq.dat$start.arm <- seq.dat$end.arm <- rep("NA", dim(seq.dat)[1])
@@ -109,6 +108,8 @@ hrd.stats <- function(seq.dat, ploidy.dat, CN.dat)
   seq.dat$post.telomere <- (seq.dat$start.pos - ref.dat$p.telomere.end[key] <= 1000)
   seq.dat$pre.telomere  <- (ref.dat$q.telomere.start[key] - seq.dat$end.pos <= 1000)
   
+  # HRD-NtAI calculation
+  # non-transcriptome allelic imbalance (raw)
   HRD.NtAIr <- getNtAI(seq.dat)
   
   # create an index of main.CN segments; these get removed
@@ -119,6 +120,7 @@ hrd.stats <- function(seq.dat, ploidy.dat, CN.dat)
     rm.ind <- c(rm.ind, which(seq.dat$chromosome == CN.dat$chromosome[i] & seq.dat$CNt == CN.dat$main.CN[i]))
   }
   
+  # ntai normalized
   HRD.NtAIm <- getNtAI(seq.dat[-rm.ind,])
   HRD.TAI <- getTAI(seq.dat)
   
@@ -127,8 +129,13 @@ hrd.stats <- function(seq.dat, ploidy.dat, CN.dat)
   seq.dat$brk.on.arm <- paste(seq.dat$chromosome, seq.dat$start.arm, seq.dat$end.arm, sep="")
   n.segs <- length(seq.dat$brk.on.arm[seq.dat$s > 3000000])
   n.breaks <- n.segs - length(unique(seq.dat$brk.on.arm)) + 1
-  HRD.LSTm = n.breaks - (15.5 * ploidy.dat$ploidy.estimate[2])
+  
+  # raw
   HRD.LSTr = n.breaks
+  
+  # normalized
+  HRD.LSTm = n.breaks - (15.5 * ploidy.dat$ploidy.estimate[2])
+  
   
   # should HRD.TAI be normalized?
   # difference between m and r for each?
