@@ -11,8 +11,6 @@
 # seq.dat <- read.table("653-Brca2Br32-T.seqz_segments.txt",  header = T)
 
 # hrd.dat = getHRD.Data( sub.id, seq.dat, ploidy.dat )
-options(error=dump.frames)
-
 
 
 # ===================================================================================== #
@@ -69,7 +67,7 @@ getTAI <- function(seq.dat)
   
   # seq.dat$s: length of the segment
   HRD.TAI <- sum(seq.dat$s > 11000000 & seq.dat$AI & !seq.dat$cross.arm 
-                      & (seq.dat$post.telomere | seq.dat$pre.telomere))
+                 & (seq.dat$post.telomere | seq.dat$pre.telomere))
   return(HRD.TAI)
 }
 # ------------------------------------------------------------------------------- #
@@ -102,7 +100,7 @@ getLOH <- function(seq.dat)
   # HRD-LOH calculation
   # loss of heterozygosity
   # if B == 0 & s > 15000mbp & within chromosome, then HRD-LOH is TRUE
-
+  
   HRD.LOH <- sum( (seq.dat$s > 15000000) & ((seq.dat$s / seq.dat$chr.size) < .9) & 
                     (seq.dat$B == 0) )
   
@@ -110,6 +108,47 @@ getLOH <- function(seq.dat)
 }
 # --------------------------------------------------------------------------------- #
 
+
+# to do: try combining segments
+# if break length is < x; & CnT1 == CnT2 & A1 == A2 & B1 == B2
+# then combine the two segments
+
+combineSeg <- function(seq.dat, brk.len.thresh)
+{
+  seq.dat$brk.len <- 0
+  
+  n.segs <- dim(seq.dat)[1]
+  rm.ind <- c()
+  
+  for( i in 1:(n.segs - 1))
+  {
+    seq.dat$brk.len[i + 1] <- seq.dat$start.pos[i + 1] - seq.dat$end.pos[i]
+    
+    if( seq.dat$brk.len[i + 1] < brk.len.thresh & 
+          seq.dat$brk.len[i + 1] > 0 &
+          seq.dat$CNt[i + 1] == seq.dat$CNt[i] &
+            seq.dat$A[i + 1] == seq.dat$A[i] &
+              seq.dat$B[i + 1] == seq.dat$B[i]   )
+    {
+   # nope, wrong.
+      seq.dat$start.pos[i + 1] <- seq.dat$start.pos[i]
+      seq.dat$s[i + 1] <- seq.dat$end.pos[i + 1] - seq.dat$start.pos[i + 1]
+      rm.ind <- c(rm.ind, i)
+    }
+  }
+  
+  if( !is.null(rm.ind) )
+  {
+    print(rm.ind)
+    seq.dat <- seq.dat[-rm.ind,]
+  }
+  
+  
+ # print(paste("Initial data has ", n.segs, " segments.", sep = ""))
+#  print(paste("Using break-length threshold of ", brk.len.thresh, sep = ""))
+#  print(paste("Combined data has ", dim(seq.dat)[1], " segments.", sep = ""))
+  return(seq.dat)
+}
 
 # ---------------------------------- getLST --------------------------------------- #
 getLST <- function(seq.dat)
@@ -120,31 +159,32 @@ getLST <- function(seq.dat)
 {
   # HRD-LST
   # large state transition
-  seq.dat$brk.on.arm <- paste(seq.dat$chromosome, seq.dat$start.arm, seq.dat$end.arm, sep="")
-  n.segs <- length(seq.dat$brk.on.arm[seq.dat$s > 3000000])
-  HRD.LST <- n.segs - length(unique(seq.dat$brk.on.arm)) + 1
+  seq.dat$brk.len <- 0
+  seq.dat$LST <- FALSE
   
+  seq.dat <- combineSeg(seq.dat, 180000)
+  n.segs <- dim(seq.dat)[1]
+  
+  for( i in 1:(n.segs - 1))
+  {
+    seq.dat$brk.len[i + 1] <- seq.dat$start.pos[i + 1] - seq.dat$end.pos[i]
+    seq.dat$LST[i] <- seq.dat$brk.len[i] < 3e06 &
+                        seq.dat$cross.arm[i] == FALSE & 
+                          seq.dat$s[i] > 10e06 & 
+                            seq.dat$s[i + 1] > 10e06
+  }
+  
+  write.table(seq.dat, "tmp-seq-dat.txt", col.names = TRUE, append = FALSE, row.names = FALSE)
+  HRD.LST <- sum(seq.dat$LST)
   return(HRD.LST)
   
 }
 # ------------------------------------------------------------------------------- #
 
-
-# ------------------------------------- hrd.stats ------------------------------------- #
-# hrd.stats is a function to compute the three HRD metrics (HRD-LOH, HRD-NtAI, and
-# HRD-LST), as well as total HRD and mean HRD.
-# these calculations are based on kara's work
-#
-# input: seq.dat, a data.frame with chromosome, start.pos, end.pos, CNt, alleleA, alleleB
-# output: out, a data.frame with HRD metrics
-hrd.stats <- function(seq.dat, ploidy.dat, CN.dat)
+preprocessSeq <- function( seq.dat )
 {
   # matches reference data to the correct chromosome in the subject data
   key = match(seq.dat$chromosome, ref.dat$chromosome)
-  
- 
-  
-  
   
   # ---
   # define allelic imbalance (AI), telomere positions, segment length, cross arms
@@ -171,6 +211,22 @@ hrd.stats <- function(seq.dat, ploidy.dat, CN.dat)
   seq.dat$post.telomere <- (seq.dat$start.pos - ref.dat$p.telomere.end[key] <= 1000)
   seq.dat$pre.telomere  <- (ref.dat$q.telomere.start[key] - seq.dat$end.pos <= 1000)
   # ---
+  
+  return(seq.dat)
+}
+
+
+# ------------------------------------- hrd.stats ------------------------------------- #
+# hrd.stats is a function to compute the three HRD metrics (HRD-LOH, HRD-NtAI, and
+# HRD-LST), as well as total HRD and mean HRD.
+# these calculations are based on kara's work
+#
+# input: seq.dat, a data.frame with chromosome, start.pos, end.pos, CNt, alleleA, alleleB
+# output: out, a data.frame with HRD metrics
+hrd.stats <- function(seq.dat, ploidy.dat, CN.dat)
+{
+  
+  seq.dat <- preprocessSeq(seq.dat)
   
   # raw data
   HRD.NtAIr <- getNtAI(seq.dat)
@@ -204,7 +260,7 @@ hrd.stats <- function(seq.dat, ploidy.dat, CN.dat)
                    HRD.NtAIm = HRD.NtAIm,
                    HRD.LSTr  = HRD.LSTr,
                    HRD.LSTm  = HRD.LSTm )
-                    
+  
   
   return(out)
   
@@ -228,7 +284,7 @@ getHRD.Data <- function( sub.id, seq.dat, ploidy.dat )
   if( any(!(seq.cols.needed %in% colnames(seq.dat))))
   {
     print(paste("column", 
-                seq.cols.needed[which(!is.true(seq.cols.needed %in% colnames(seq.dat)))],
+                seq.cols.needed[which(!(seq.cols.needed %in% colnames(seq.dat)))],
                 "missing in the seq data.", sep=" "))
     print(paste("Looking for columns:", seq.cols.needed, sep=" "))
     print(paste("Found:", seq.cols.needed[seq.cols.needed %in% colnames(seq.dat)]))
@@ -274,13 +330,31 @@ getHRD.Data <- function( sub.id, seq.dat, ploidy.dat )
   CN.dat <- data.frame(chromosome=unique(seq.dat$chromosome), main.CN=main.CN)
   
   # compute HRD stats, and record along with id
-
+  
   hrd.dat = round(hrd.stats(seq.dat, ploidy.dat, CN.dat),3)
   hrd.dat$ID <- as.character(sub.id)
   
   return(hrd.dat)
 }
 # ------------------------------------------------------------------------------------- #
+
+
+# get number of segments per break-length threshold
+mb.thresh <- seq(from = 10000, to = 3e06, by = 10000)
+out <- rep(0, length(mb.thresh) )
+ct <- 0
+for( i in mb.thresh)
+{
+  ct <- ct + 1
+  x <- combineSeg(seq.dat, i)
+  out[ct] <- dim(x)[1]
+  
+}
+
+png("n.segs by break length.png")
+plot(mb.thresh, out, type = "l")
+dev.off()
+
 
 # ------------------------------------------------------------------------------------- #
 # ----------------------------------- end functions ----------------------------------- #
