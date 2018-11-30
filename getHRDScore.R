@@ -109,34 +109,48 @@ getLOH <- function(seq.dat)
 # --------------------------------------------------------------------------------- #
 
 
-# to do: try combining segments
-# if break length is < x; & CnT1 == CnT2 & A1 == A2 & B1 == B2
-# then combine the two segments
 
+# ---------------------------------- combineSeg ------------------------------------ #
+# function to combine segments. if the break length between two segments is too small,
+# its probably not a true break. in this case, combine the two segments.
 combineSeg <- function(seq.dat, brk.len.thresh)
+  # input: seq.dat (data.frame), the sequencing data
+  #        brk.len.thresh (integer), the threshold for break length. if break length is
+  #         below this value, the two adjacent segments will be combined.
+  # output: seq.dat (data.frame), the sequencing data with combined segments
 {
   seq.dat$brk.len <- 0
   
+  # total number of segments
   n.segs <- dim(seq.dat)[1]
+  
+  # segments to remove- these are redundant after addition
   rm.ind <- c()
   
   for( i in 1:(n.segs - 1))
   {
+    # get the length of the break between segments
     seq.dat$brk.len[i + 1] <- seq.dat$start.pos[i + 1] - seq.dat$end.pos[i]
     
+    # when crossing to the next chromosome, break length will be negative; dont
+    # add these
+    # if segment length < threshold ,and CNt, A, and B are identical, combine 
+    # the two segments
     if( seq.dat$brk.len[i + 1] < brk.len.thresh & 
           seq.dat$brk.len[i + 1] > 0 &
           seq.dat$CNt[i + 1] == seq.dat$CNt[i] &
             seq.dat$A[i + 1] == seq.dat$A[i] &
               seq.dat$B[i + 1] == seq.dat$B[i]   )
     {
-   # nope, wrong.
+   # nope, wrong. TEST THIS PART
+      # adjust start/end points, and segment length
       seq.dat$start.pos[i + 1] <- seq.dat$start.pos[i]
       seq.dat$s[i + 1] <- seq.dat$end.pos[i + 1] - seq.dat$start.pos[i + 1]
       rm.ind <- c(rm.ind, i)
     }
   }
   
+  # remove redundant segments
   if( !is.null(rm.ind) )
   {
     print(rm.ind)
@@ -149,6 +163,7 @@ combineSeg <- function(seq.dat, brk.len.thresh)
 #  print(paste("Combined data has ", dim(seq.dat)[1], " segments.", sep = ""))
   return(seq.dat)
 }
+# --------------------------------------------------------------------------------- #
 
 # ---------------------------------- getLST --------------------------------------- #
 getLST <- function(seq.dat)
