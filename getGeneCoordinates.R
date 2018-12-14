@@ -1,8 +1,11 @@
 #!/usr/bin/env Rscript
 
+
 # pluta 10/5/18
 # given a gene name, this function returns the genomic coordits (geneID, start, and end)
 
+# intended to be called from a bash script
+# TODO: turn this into a pure R function
 # input: GENE (string), a gene name
 # output: gene.dat, a data.frame with fields geneID, chr, start, and end
 
