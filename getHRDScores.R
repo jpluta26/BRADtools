@@ -91,7 +91,7 @@ getTAI.norm <- function(seq.dat, CN.dat, min.seg.size = 1e06)
   }
   
   # normalized
-  HRD.TAI <- getTAI(seq.dat[-rm.ind,], 1e06)
+  HRD.TAI <- getTAI.raw(seq.dat[-rm.ind,], 1e06)
   
   return(HRD.TAI)
 }
@@ -244,6 +244,8 @@ combineSeg <- function(seq.dat, max.brk.len)
     
     # if break length is < max.brk.len; & CnT1 == CnT2 & A1 == A2 & B1 == B2
     # then combine the two segments
+    # when combining segments- use the start point of seg1 and the end point of seg2.
+    # the start point is reassigned to the index of seg2, and the previous entry is deleted.
     if( seq.dat$brk.len[i + 1] < max.brk.len & 
           seq.dat$brk.len[i + 1] > 0 &
           seq.dat$CNt[i + 1] == seq.dat$CNt[i] &
@@ -256,10 +258,10 @@ combineSeg <- function(seq.dat, max.brk.len)
     }
   }
   
+  # if any segments were combined, delete the redundant segments
   if( !is.null(rm.ind) )
   {
     print(rm.ind)
-
     seq.dat <- seq.dat[-rm.ind,]
   }
   
