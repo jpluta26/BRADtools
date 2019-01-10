@@ -296,6 +296,13 @@ preprocessSeq <- function( seq.dat )
     stop("Column mismatch. Exiting.")
   } 
   
+  # remove rows w/ missing entries
+  if( any( is.na(seq.dat$CNt) ))
+  {
+    print(paste("Row: ", which(is.na(seq.dat$CNt)), " contains NA; removing.", sep = ""))
+    seq.dat <- subset(seq.dat, !is.na(seq.dat$CNt))
+  }
+  
   levels(seq.dat$chromosome) <- levels(ref.dat$chromosome)
   
   seq.dat$frac.chr <- (seq.dat$end.pos - seq.dat$start.pos) / ref.dat$chr.size[match(seq.dat$chromosome, ref.dat$chromosome)]
