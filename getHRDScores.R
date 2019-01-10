@@ -2,7 +2,7 @@
 
 # john pluta & kara maxwell 
 # v1.00: 11/7/2016
-# v1.01: 11/8/2018
+# v1.01: 1/10/2019
 # citation: Maxwell et al. BRCA locus specific loss of heterozygosity in germline BRCA1 and BRCA2 carriers. 2017. Nat Comm 8(1):319.
 # contact: jpluta@pennmedicine.upenn.edu
 
