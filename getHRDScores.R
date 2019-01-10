@@ -1,4 +1,5 @@
 
+
 # john pluta & kara maxwell 
 # v1.00: 11/7/2016
 # v1.01: 11/8/2018
@@ -8,12 +9,12 @@
 # ===================================================================================== #
 # ================================ constants ========================================== #
 # ===================================================================================== #
-# the columns needed for an analysis, per standard sequenza naming conventions - you can change this
-# to whatever colnames you use)
+# the columns needed for an analysis, per standard sequenza naming conventions
 seq.cols.needed = c("chromosome", "start.pos", "end.pos", "CNt", "A", "B")
 
 # predefined data about chromosome size, centromere, and telomere location
 # chromosome size, centromere and telomere locations (in hg19/GRCh37)
+# TODO: add ref data for GRCH38
 ref.dat = data.frame( chromosome = paste("chr", c(seq(1:22), "X", "Y"), sep=""),
                       centromere.start = c(121535434, 92326171, 90504854, 49660117, 46405641, 58830166,
                                            58054331, 43838887, 47367679, 39254935, 51644205, 34856694, 
@@ -49,7 +50,7 @@ ref.dat = data.frame( chromosome = paste("chr", c(seq(1:22), "X", "Y"), sep=""),
 
 # ------------------------------- getTAI.raw ----------------------------------------- #
 # function to get telomeric allelic imbalance (TAI) without including main CNt segments
-getTAI.raw <- function(seq.dat, min.seg.size = 1e06)
+getTAI.raw <- function(seq.dat, min.seg.size = 11e06)
   # input:
   #   seq.dat (data.frame), the sequencing data (eg, .seqz_segments.txt)
   #   min.seg.size, (integer), the minimum segment size required for analysis
@@ -70,7 +71,7 @@ getTAI.raw <- function(seq.dat, min.seg.size = 1e06)
 
 # ------------------------------- getTAI.norm ----------------------------------- #
 # function to get telomeric allelic imbalance (TAI) without including main CNt segments
-getTAI.norm <- function(seq.dat, CN.dat, min.seg.size = 1e06)
+getTAI.norm <- function(seq.dat, CN.dat, min.seg.size = 11e06)
   # input:
   #   seq.dat (data.frame), the sequencing data (eg, .seqz_segments.txt)
   #   min.seg.size, (integer), the minimum segment size required for analysis
@@ -91,7 +92,7 @@ getTAI.norm <- function(seq.dat, CN.dat, min.seg.size = 1e06)
   }
   
   # normalized
-  HRD.TAI <- getTAI.raw(seq.dat[-rm.ind,], 1e06)
+  HRD.TAI <- getTAI.raw(seq.dat[-rm.ind,], 11e06)
   
   return(HRD.TAI)
 }
@@ -101,7 +102,7 @@ getTAI.norm <- function(seq.dat, CN.dat, min.seg.size = 1e06)
 # ------------------------------- getNTAI --------------------------------------- #
 # function to get NTAI without including main CNt segments
 # non-telomeric allelic imbalance
-getNTAI.raw <- function(seq.dat, min.seg.size = 1e06)
+getNTAI.raw <- function(seq.dat, min.seg.size = 11e06)
   # input:
   #   seq.dat (data.frame), the sequencing data (eg, .seqz_segments.txt)
   #   min.seg.size, (integer), the minimum segment size required for analysis
@@ -124,7 +125,7 @@ getNTAI.raw <- function(seq.dat, min.seg.size = 1e06)
 # ------------------------------- getNTAI.norm --------------------------------------- #
 # function to get NTAI without including main CNt segments
 # non-telomeric allelic imbalance
-getNTAI.norm <- function(seq.dat, CN.dat, min.seg.size = 1e06 )
+getNTAI.norm <- function(seq.dat, CN.dat, min.seg.size = 11e06 )
   # input:
   #   seq.dat (data.frame), the sequencing data (eg, .seqz_segments.txt)
   #   min.seg.size, (integer), the minimum segment size required for analysis
@@ -157,11 +158,11 @@ getLOH <- function(seq.dat)
 {
   # HRD-LOH calculation
   # loss of heterozygosity
-  # if B == 0 & s > 15000mbp & within chromosome, then HRD-LOH is TRUE
+  # if B == 0 & s > 15mbp & within chromosome, then HRD-LOH is TRUE
   
   HRD.LOH <- sum( (seq.dat$s > 15e06) & ((seq.dat$s / seq.dat$chr.size) < 0.9) & 
                     (seq.dat$B == 0) )
-  
+  # mdacc doesnt have seq.dat$B == 0 condition
   return(HRD.LOH)
 }
 # --------------------------------------------------------------------------------- #
@@ -244,8 +245,6 @@ combineSeg <- function(seq.dat, max.brk.len)
     
     # if break length is < max.brk.len; & CnT1 == CnT2 & A1 == A2 & B1 == B2
     # then combine the two segments
-    # when combining segments- use the start point of seg1 and the end point of seg2.
-    # the start point is reassigned to the index of seg2, and the previous entry is deleted.
     if( seq.dat$brk.len[i + 1] < max.brk.len & 
           seq.dat$brk.len[i + 1] > 0 &
           seq.dat$CNt[i + 1] == seq.dat$CNt[i] &
@@ -258,10 +257,10 @@ combineSeg <- function(seq.dat, max.brk.len)
     }
   }
   
-  # if any segments were combined, delete the redundant segments
   if( !is.null(rm.ind) )
   {
     print(rm.ind)
+
     seq.dat <- seq.dat[-rm.ind,]
   }
   
@@ -331,6 +330,8 @@ preprocessSeq <- function( seq.dat )
   
   seq.dat$cross.arm <- seq.dat$start.arm != seq.dat$end.arm
   
+  
+  # define end telomeres
   seq.dat$post.telomere <- (seq.dat$start.pos - ref.dat$p.telomere.end[key] <= 1000)
   seq.dat$pre.telomere  <- (ref.dat$q.telomere.start[key] - seq.dat$end.pos <= 1000)
   # ---
@@ -342,6 +343,7 @@ preprocessSeq <- function( seq.dat )
 
 
 # ----------------------------------- getCNT ------------------------------------------ #
+# setup CNt values
 getCNt <- function( seq.dat )
   # input:
   #   seq.dat (data.frame), the sequencing data (eg, .seqz_segments.txt)
@@ -394,12 +396,13 @@ getCNt <- function( seq.dat )
 # input: seq.dat, (data.frame) with chromosome, start.pos, end.pos, CNt, alleleA, alleleB;
 #         ploidy.dat (data.frame), the ploidy data
 #         CN.dat (data.frame), copy number data
+#         min.seg.size (integer), minimum segment size used in TAI calculations
+#         scaleTotal (boolean), rescale HRD total to 0-100
 # output: out, a data.frame with HRD metrics
-hrd.stats <- function(seq.dat, ploidy.dat, CN.dat)
+hrd.stats <- function(seq.dat, ploidy.dat, CN.dat, min.seg.size = 11e06, scaleTotal = FALSE)
 {
   
   seq.dat <- preprocessSeq(seq.dat)
-  min.seg.size <- 1e06
   
   # raw data
   HRD.NTAIr <- getNTAI.raw( seq.dat, min.seg.size )
@@ -419,6 +422,14 @@ hrd.stats <- function(seq.dat, ploidy.dat, CN.dat)
                    HRD.LSTr  = HRD.LSTr,
                    HRD.LSTm  = HRD.LSTm )
   
+  out$HRD.TOTAL <- out$HRD.LOH + out$HRD.LSTr + out$HRD.NTAIm
+  
+  # rescale HRD total to 0-100
+  if( scaleTotal == TRUE )
+  {
+    library(scales)
+    out$HRD.TOTAL <- round( rescale(out$HRD.TOTAL, to = c(0,100), from = range(out$HRD.TOTAL)) )
+  }
   
   return(out)
   
@@ -435,20 +446,19 @@ hrd.stats <- function(seq.dat, ploidy.dat, CN.dat)
 # number of regions with allelic imbalances that extend to one of the subtelomeres, do not cross the 
 # centromere, and are longer than 11Mb." 
 #
-# however, it seems most groups use a length around 1mbp.
+
 
 
 # ------------------------------------------------------------------------------------- #
 # ----------------------------------- end functions ----------------------------------- #
 # ------------------------------------------------------------------------------------- #
 
-# example
-
-# seq.dat <- read.table("C:/Users/jpluta/Desktop/Sequenza/sequenza_TCGA/TCGA-AN-A04D-01A/TCGA-AN-A04D-01A.seqz_segments.txt", header = TRUE)
-# ploidy.dat <- read.table("C:/Users/jpluta/Desktop/Sequenza/sequenza_TCGA/TCGA-AN-A04D-01A/TCGA-AN-A04D-01A.seqz_confints_CP.txt", header = TRUE)
-# sub.id <- "TCGA-AN-A04D"
-
+# example usage
+# seq.dat <- read.table("sub01_seqz_segments.txt", header = TRUE)
+# ploidy.dat <- read.table("sub01.seqz_confints_CP.txt", header = TRUE)
+# sub.id <- "sub01"
 # seq.dat <- preprocessSeq(seq.dat)
 # CN.dat <- getCNt(seq.dat)
-# hrd.dat <- round(hrd.stats(seq.dat, ploidy.dat, CN.dat),3)
-# hrd.dat$ID <- as.character(sub.id)
+# hrd.dat <- round(hrd.stats(seq.dat, ploidy.dat, CN.dat), 3)
+# hrd.dat$ID <- sub.id
+
