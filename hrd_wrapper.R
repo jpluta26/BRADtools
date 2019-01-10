@@ -27,8 +27,10 @@ ploidy.fname <- args[3]
 
 ploidy.dat <- read.table(ploidy.fname, header = TRUE)
 seq.dat <- read.table(seq.fname, header = TRUE)
-
-hrd <- getHRD.Data( sub.id, seq.dat, ploidy.dat )
-
+seq.dat <- preprocessSeq(seq.dat)
+CN.dat <- getCNt(seq.dat)
+hrd <- round( hrd.stats(seq.dat, ploidy.dat, CN.dat ), 3)
+hrd$ID <- sub.id
 write.table(hrd, paste(sub.id, "hrd.txt", sep = "_"), quote = FALSE,
             col.names = TRUE, row.names = FALSE, append = FALSE)
+
