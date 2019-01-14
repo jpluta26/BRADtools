@@ -1,8 +1,9 @@
 
 
+
 # john pluta & kara maxwell 
 # v1.00: 11/7/2016
-# v1.01: 1/10/2019
+# v1.01: 11/8/2018
 # citation: Maxwell et al. BRCA locus specific loss of heterozygosity in germline BRCA1 and BRCA2 carriers. 2017. Nat Comm 8(1):319.
 # contact: jpluta@pennmedicine.upenn.edu
 
@@ -386,11 +387,38 @@ getCNt <- function( seq.dat )
 # ------------------------------------------------------------------------------- #
 
 
+# ------------------------------- getHRD.Score ---------------------------------- #
+# function to get the total HRD score. this is a simple summation of LST, NTAI, and LOH.
+# this is the 'standard' HRD score most commonly seen in publication. this function is
+# implemented to automatically calculate this score- eg, select the proper mean/raw criteria
+getHRD.Score <- function( seq.dat, CN.dat, min.seg.size = 11e06, scaleTotal = FALSE )
+  # input: seq.dat, (data.frame) with chromosome, start.pos, end.pos, CNt, alleleA, alleleB;
+  #         ploidy.dat (data.frame), the ploidy data
+  #         CN.dat (data.frame), copy number data
+  #         min.seg.size (integer), minimum segment size used in TAI calculations
+  #         scaleTotal (boolean), rescale HRD total to 0-100
+  # output: HRD.Score (integer), the total HRD Score
+{
+  HRD.Score <- getLOH(  seq.dat ) + getLST.raw(  seq.dat ) + getNTAI.norm( seq.dat, CN.dat, min.seg.size )
+  
+  # rescale HRD total to 0-100
+  if( scaleTotal == TRUE )
+  {
+    library(scales)
+    out$HRD.Score <- round( rescale(out$HRD.Score, to = c(0,100), from = range(out$HRD.Score)) )
+  }
+  
+  return(HRD.Score)
+  
+  
+}
+# ------------------------------------------------------------------------------- #
+
 
 # ------------------------------------- hrd.stats ------------------------------------- #
 # hrd.stats is a function to compute the three HRD metrics (HRD-LOH, HRD-NTAI, and
 # HRD-LST), as well as total HRD and mean HRD. this simply wraps up the output in one
-# dataframe
+# dataframe- you can run all of these steps individually for error checking.
 
 #
 # input: seq.dat, (data.frame) with chromosome, start.pos, end.pos, CNt, alleleA, alleleB;
@@ -399,7 +427,7 @@ getCNt <- function( seq.dat )
 #         min.seg.size (integer), minimum segment size used in TAI calculations
 #         scaleTotal (boolean), rescale HRD total to 0-100
 # output: out, a data.frame with HRD metrics
-hrd.stats <- function(seq.dat, ploidy.dat, CN.dat, min.seg.size = 11e06, scaleTotal = FALSE)
+hrd.stats <- function(seq.dat, ploidy.dat, CN.dat, min.seg.size = 11e06)
 {
   
   seq.dat <- preprocessSeq(seq.dat)
@@ -422,30 +450,14 @@ hrd.stats <- function(seq.dat, ploidy.dat, CN.dat, min.seg.size = 11e06, scaleTo
                    HRD.LSTr  = HRD.LSTr,
                    HRD.LSTm  = HRD.LSTm )
   
-  out$HRD.TOTAL <- out$HRD.LOH + out$HRD.LSTr + out$HRD.NTAIm
+  out$HRD.Score <- getHRD.Score( seq.dat, CN.dat, min.seg.size, scaleTotal = FALSE )
   
-  # rescale HRD total to 0-100
-  if( scaleTotal == TRUE )
-  {
-    library(scales)
-    out$HRD.TOTAL <- round( rescale(out$HRD.TOTAL, to = c(0,100), from = range(out$HRD.TOTAL)) )
-  }
+ 
   
   return(out)
   
 }
 # ------------------------------------------------------------------------------- #
-
-# re: min seg length-
-# timms et al 2014. -"HRD-TAI score was defined as the number of regions with allelic imbalances that extend to
-# one of the subtelomeres but do not cross the centromere. A region was counted only if it
-# encompassed a certain minimum number of SNPs (on average approximately 1.8 Mb). We tested for 
-# association of HRD-TAI score with BRCA1, BRCA2, and RAD51C deficiency in three datasets of 609 ovarian
-# tumors (data not shown) and found the association to be more significant if the cutoff size of
-# HRD-TAI regions was increased to 11MB. Therefore, a modified HRD-TAIm score was defined as the
-# number of regions with allelic imbalances that extend to one of the subtelomeres, do not cross the 
-# centromere, and are longer than 11Mb." 
-#
 
 
 
@@ -461,4 +473,3 @@ hrd.stats <- function(seq.dat, ploidy.dat, CN.dat, min.seg.size = 11e06, scaleTo
 # CN.dat <- getCNt(seq.dat)
 # hrd.dat <- round(hrd.stats(seq.dat, ploidy.dat, CN.dat), 3)
 # hrd.dat$ID <- sub.id
-
