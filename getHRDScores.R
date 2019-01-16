@@ -220,7 +220,24 @@ getLST.norm <- function(seq.dat, ploidy.dat)
 }
 # ------------------------------------------------------------------------------- #
 
-
+# ------------------------ normByPloidy ---------------------------------------------- #
+ploidyCorrectionFactor <- function( ploidy )
+{
+  # baseline is diploid (ploidy = 2)
+  # for tetraaploid tumors, we would expect half the events. eg. 2^2 = 4 -> 1/2
+  # for octoploid tumors, 1/4. eg. 2^3 = 8 -> 1/4
+  # for tumor of degree 2^n, correction factor is 1 / (2^(n - 1))
+  # ploidy = 2^n
+  # log(ploidy) = n log(2)
+  # n = log(ploidy) / log(2)
+  
+  
+  n = log(ploidy) / log(2)
+  k = 1 / (2^(n - 1) )
+  
+  return(k)
+}  
+# ------------------------------------------------------------------------------------ #
 
 # ------------------------------------------------------------------------------------- #
 # some long segments are falsely read as multiple shorter segments
