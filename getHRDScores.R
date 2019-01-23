@@ -151,7 +151,7 @@ getNTAI.norm <- function(seq.dat, CN.dat, min.seg.size = 11e06 )
 
 # ------------------------------- getLOH --------------------------------------- #
 # function to get LOH 
-getLOH <- function(seq.dat)
+getLOH <- function(seq.dat, min.seg.size = 15e06)
   # input:
   #   seq.dat (data.frame), the sequencing data (eg, .seqz_segments.txt)
   # output:
@@ -161,7 +161,7 @@ getLOH <- function(seq.dat)
   # loss of heterozygosity
   # if B == 0 & s > 15mbp & within chromosome, then HRD-LOH is TRUE
   
-  HRD.LOH <- sum( (seq.dat$s > 15e06) & ((seq.dat$s / seq.dat$chr.size) < 0.9) & 
+  HRD.LOH <- sum( (seq.dat$s > min.seg.size) & ((seq.dat$s / seq.dat$chr.size) < 0.9) & 
                     (seq.dat$B == 0) )
   # mdacc doesnt have seq.dat$B == 0 condition
   return(HRD.LOH)
@@ -215,7 +215,8 @@ getLST.norm <- function(seq.dat, ploidy.dat)
   # any large genomic rearrangement could be increased simply by having more 
   # chromosomes (higher ploidy), and not because of the biological process
   # adjust for this
-  HRD.LSTm = getLST.raw(seq.dat) - (15.5 * ploidy.dat$ploidy.estimate[2])
+  HRD.LSTm = getLST.raw(seq.dat) * ploidyCorrectionFactor(ploidy.dat$ploidy.estimate[2])
+  return(HRD.LSTm)
   
 }
 # ------------------------------------------------------------------------------- #
@@ -328,6 +329,9 @@ preprocessSeq <- function( seq.dat )
   seq.dat$brk.len <- 0
   seq.dat <- combineSeg(seq.dat, 3e06)
   
+  # remove segments less than 3e06, these are probably sequencing error
+  seq.dat <- seq.dat[ -seq.dat$s < 3e06, ]
+  
   # matches reference data to the correct chromosome in the subject data
   key = match(seq.dat$chromosome, ref.dat$chromosome)
   
@@ -416,7 +420,7 @@ getHRD.Score <- function( seq.dat, CN.dat, min.seg.size = 11e06, scaleTotal = FA
   #         scaleTotal (boolean), rescale HRD total to 0-100
   # output: HRD.Score (integer), the total HRD Score
 {
-  HRD.Score <- getLOH(  seq.dat ) + getLST.raw(  seq.dat ) + getNTAI.norm( seq.dat, CN.dat, min.seg.size )
+  HRD.Score <- getLOH(  seq.dat ) + getLST.norm(  seq.dat ) + getNTAI.norm( seq.dat, CN.dat, min.seg.size )
   
   # rescale HRD total to 0-100
   if( scaleTotal == TRUE )
@@ -467,7 +471,7 @@ hrd.stats <- function(seq.dat, ploidy.dat, CN.dat, min.seg.size = 11e06)
                    HRD.LSTr  = HRD.LSTr,
                    HRD.LSTm  = HRD.LSTm )
   
-  out$HRD.Score <- getHRD.Score( seq.dat, CN.dat, min.seg.size, scaleTotal = FALSE )
+  out$HRD.Score <- getHRD.Score( seq.dat, CN.dat, ploidy.dat, min.seg.size, scaleTotal = TRUE )
   
  
   
