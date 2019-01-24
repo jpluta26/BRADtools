@@ -1,6 +1,5 @@
 
 
-
 # john pluta & kara maxwell 
 # v1.00: 11/7/2016
 # v1.01: 11/8/2018
@@ -64,7 +63,7 @@ getTAI.raw <- function(seq.dat, min.seg.size = 11e06)
   # segment is in the telomeres; and is not on centromere...
   HRD.TAI <- sum(seq.dat$s > min.seg.size & seq.dat$AI & !seq.dat$cross.arm 
                  & (seq.dat$post.telomere | seq.dat$pre.telomere))
-
+  
   return(HRD.TAI)
 }
 # ------------------------------------------------------------------------------- #
@@ -83,7 +82,7 @@ getTAI.norm <- function(seq.dat, CN.dat, min.seg.size = 11e06)
   # seq.dat$s: length of the segment
   # if length of segment is greater than the minimum; and allelic imbalance is present; and
   # segment is in the telomeres; and is not on centromere...
-
+  
   # create an index of main.CN segments; these get removed to normalize TAI
   rm.ind <- c()
   
@@ -117,7 +116,7 @@ getNTAI.raw <- function(seq.dat, min.seg.size = 11e06)
                     !seq.dat$cross.arm & 
                     !seq.dat$post.telomere & 
                     !seq.dat$pre.telomere)
-
+  
   return(HRD.NTAI)
 }
 # --------------------------------------------------------------------------------- #
@@ -265,12 +264,12 @@ combineSeg <- function(seq.dat, max.brk.len)
     # if break length is < max.brk.len; & CnT1 == CnT2 & A1 == A2 & B1 == B2
     # then combine the two segments
     if( seq.dat$brk.len[i + 1] < max.brk.len & 
-          seq.dat$brk.len[i + 1] > 0 &
-          seq.dat$CNt[i + 1] == seq.dat$CNt[i] &
-            seq.dat$A[i + 1] == seq.dat$A[i] &
-              seq.dat$B[i + 1] == seq.dat$B[i]   )
+        seq.dat$brk.len[i + 1] > 0 &
+        seq.dat$CNt[i + 1] == seq.dat$CNt[i] &
+        seq.dat$A[i + 1] == seq.dat$A[i] &
+        seq.dat$B[i + 1] == seq.dat$B[i]   )
     {
- 
+      
       seq.dat$start.pos[i + 1] <- seq.dat$start.pos[i]
       rm.ind <- c(rm.ind, i)
     }
@@ -279,7 +278,7 @@ combineSeg <- function(seq.dat, max.brk.len)
   if( !is.null(rm.ind) )
   {
     print(rm.ind)
-
+    
     seq.dat <- seq.dat[-rm.ind,]
   }
   
@@ -297,12 +296,12 @@ combineSeg <- function(seq.dat, max.brk.len)
 # define allelic imbalance (AI), telomere positions, segment length, cross arms
 # these are used in the various HRD scores
 preprocessSeq <- function( seq.dat )
-# input:
-#   seq.dat (data.frame), the sequencing data (eg, .seqz_segments.txt)
-# output:
-#   seq.dat (data.frame), the sequencing data with more factors added
+  # input:
+  #   seq.dat (data.frame), the sequencing data (eg, .seqz_segments.txt)
+  # output:
+  #   seq.dat (data.frame), the sequencing data with more factors added
 {
-
+  
   # check the sequencing data input to make sure it has the data we need
   if( any(!(seq.cols.needed %in% colnames(seq.dat))))
   {
@@ -329,13 +328,16 @@ preprocessSeq <- function( seq.dat )
   seq.dat$brk.len <- 0
   seq.dat <- combineSeg(seq.dat, 3e06)
   
-  # remove segments less than 3e06, these are probably sequencing error
-  seq.dat <- seq.dat[ -seq.dat$s < 3e06, ]
+ 
   
   # matches reference data to the correct chromosome in the subject data
   key = match(seq.dat$chromosome, ref.dat$chromosome)
   
   seq.dat$s <- seq.dat$end.pos - seq.dat$start.pos
+  
+  # remove segments less than 3e06, these are probably sequencing error
+  seq.dat <- seq.dat[ -seq.dat$s < 3e06, ]
+  
   seq.dat$chr.size <- ref.dat$chr.size[match(seq.dat$chromosome, ref.dat$chromosome)]
   
   seq.dat$AI <- (seq.dat$A > seq.dat$B) & (seq.dat$A != 1) & (seq.dat$B != 0)
@@ -412,7 +414,7 @@ getCNt <- function( seq.dat )
 # function to get the total HRD score. this is a simple summation of LST, NTAI, and LOH.
 # this is the 'standard' HRD score most commonly seen in publication. this function is
 # implemented to automatically calculate this score- eg, select the proper mean/raw criteria
-getHRD.Score <- function( seq.dat, CN.dat, min.seg.size = 11e06, scaleTotal = FALSE )
+getHRD.Score <- function( seq.dat, CN.dat, ploidy.dat, min.seg.size = 11e06, scaleTotal = FALSE )
   # input: seq.dat, (data.frame) with chromosome, start.pos, end.pos, CNt, alleleA, alleleB;
   #         ploidy.dat (data.frame), the ploidy data
   #         CN.dat (data.frame), copy number data
@@ -420,13 +422,13 @@ getHRD.Score <- function( seq.dat, CN.dat, min.seg.size = 11e06, scaleTotal = FA
   #         scaleTotal (boolean), rescale HRD total to 0-100
   # output: HRD.Score (integer), the total HRD Score
 {
-  HRD.Score <- getLOH(  seq.dat ) + getLST.norm(  seq.dat ) + getNTAI.norm( seq.dat, CN.dat, min.seg.size )
+  HRD.Score <- getLOH(  seq.dat ) + getLST.norm(  seq.dat, ploidy.dat ) + getNTAI.norm( seq.dat, CN.dat, min.seg.size )
   
   # rescale HRD total to 0-100
   if( scaleTotal == TRUE )
   {
     library(scales)
-    out$HRD.Score <- round( rescale(out$HRD.Score, to = c(0,100), from = range(out$HRD.Score)) )
+    HRD.Score <- round( rescale(HRD.Score, to = c(0,100), from = range(HRD.Score)) )
   }
   
   return(HRD.Score)
@@ -473,13 +475,12 @@ hrd.stats <- function(seq.dat, ploidy.dat, CN.dat, min.seg.size = 11e06)
   
   out$HRD.Score <- getHRD.Score( seq.dat, CN.dat, ploidy.dat, min.seg.size, scaleTotal = TRUE )
   
- 
+  
   
   return(out)
   
 }
 # ------------------------------------------------------------------------------- #
-
 
 
 # ------------------------------------------------------------------------------------- #
