@@ -5,9 +5,9 @@
 # example wrapper script for getHRDScore functions
 # call this script from the command line or shell script:
 # Rscript runHRD.R sub.id seq.fname ploidu.fname
+library(scales)
 
-
-source("/Users/jpluta/Desktop/CODE/getHRDScore.R")
+#source("/Users/jpluta/Desktop/CODE/getHRDScore.R")
 
 
 args = commandArgs(trailingOnly = TRUE)
@@ -31,6 +31,7 @@ seq.dat <- preprocessSeq(seq.dat)
 CN.dat <- getCNt(seq.dat)
 hrd <- round( hrd.stats(seq.dat, ploidy.dat, CN.dat ), 3)
 hrd$ID <- sub.id
+hrd$HRD.Score.Rescale <- round( rescale( hrd$HRD.Score, to = c(0,100), from = range(hrd$HRD.Score)))
 write.table(hrd, paste(sub.id, "hrd.txt", sep = "_"), quote = FALSE,
             col.names = TRUE, row.names = FALSE, append = FALSE)
 
