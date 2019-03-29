@@ -65,6 +65,9 @@ colnames(dat) <- c("rsid", "p", "chr", "bp")
 chrlabs <- as.character(seq(1:length(unique(dat$CHR))))
 dat$p <- as.numeric(dat$p)
 
+# remove any rsids that snuck in
+dat <- dat[!is.na(dat$chr),]
+			
 print("done!")
 
 
