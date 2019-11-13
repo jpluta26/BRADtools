@@ -2,6 +2,7 @@
 # estimates out of sample error with leave-one-out cross validation
 
 getROCstats <- function( x, y, covars = NULL )
+  # TODO: make cross validation optional
 # input: x (vector), the independent variable
 #        y (binary vector), the dependent variable
 #        covars (vector, data.frame, or matrix), other independent variable(s)
@@ -11,12 +12,16 @@ getROCstats <- function( x, y, covars = NULL )
   library(ROCR)
   
   # dependent variable must be an integer of values 0 and 1
-  if( class(y) != "integer" )
+  if( class(y) == "numeric" )
   {
-    print("attempting to coerce y to integer...")
-    y <- as.integer(y) - 1
+     y <- as.integer(y)
+  } else 
+    if( class(y) != "integer" )
+    {
+      print("attempting to coerce y to integer...")
+      y <- as.integer(y) - 1
    
-  }
+    }
   
   if(any(!(y %in% c(0,1))))
   {
@@ -40,6 +45,8 @@ getROCstats <- function( x, y, covars = NULL )
     # multivariate case
     if( !is.null(covars))
     {
+      # this will crash if covars has mixed data types (like a factor)
+      # TODO: add in a way to accomodate factors. needs different subsetting
       out <- glm(  y[-i] ~ x[-i] + covars[-i,], family = "binomial")
       B <- out$coefficients
       pprob.vec[i] <- unlist(c(1, x[i], covars[i,])) %*% B
