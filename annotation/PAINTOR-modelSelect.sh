@@ -5,7 +5,16 @@
 # run this on macbook
 
 # get the baseline model baye's factor
-~/PAINTOR_V3.0/PAINTOR -input input.files -in . -out . -Zhead z -LDname ld -Gname enrich.Base -Lname BF.Base -enumerate 2
+CMD="~/PAINTOR_V3.0/PAINTOR -input input.files -in . -out . -Zhead z -LDname ld -Gname enrich.Base -Lname BF.Base -enumerate 2"
+eval $CMD
+
+if [ $? -ne 0 ]
+then
+        echo "$CMD"
+        echo "command failed"
+        echo "PAINTOR requires- non-singular LD matrix; spaces instead of tabs"
+        exit 1
+fi
 
 if [ -e univariate.stats ]
 then
