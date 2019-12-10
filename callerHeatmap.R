@@ -6,6 +6,7 @@
 
 library(data.table)
 library(dplyr)
+library(ggplot2)
 
 args = commandArgs(trailingOnly = TRUE)
 if( length(args) < 2)
@@ -14,8 +15,8 @@ if( length(args) < 2)
   print("INFILENAME = the caller data, eg somatic.high_confidence.hg19_multianno.report.tsv")
   stop("OUTFILENAME = the ROOT of the output image and text file, eg TEST for TEST.png and TEST-stats.txt")
 } else {
-  INFILE <- args[1]
-  OUTFILE <- args[2]
+  INFILENAME <- args[1]
+  OUTFILENAME <- args[2]
 }
 dat <- read.table(INFILENAME, header = TRUE, sep = "\t", as.is = TRUE)
 #dat <- read.table("somatic.high_confidence.hg19_multianno.report.tsv", header = TRUE, sep = "\t", as.is = TRUE)
