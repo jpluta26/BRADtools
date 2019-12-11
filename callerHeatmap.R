@@ -6,7 +6,6 @@
 
 library(data.table)
 library(dplyr)
-library(ggplot2)
 
 args = commandArgs(trailingOnly = TRUE)
 if( length(args) < 2)
@@ -14,10 +13,8 @@ if( length(args) < 2)
   print("need to provide 2 arguments: INFILENAME OUTFILENAME")
   print("INFILENAME = the caller data, eg somatic.high_confidence.hg19_multianno.report.tsv")
   stop("OUTFILENAME = the ROOT of the output image and text file, eg TEST for TEST.png and TEST-stats.txt")
-} else {
-  INFILENAME <- args[1]
-  OUTFILENAME <- args[2]
 }
+
 dat <- read.table(INFILENAME, header = TRUE, sep = "\t", as.is = TRUE)
 #dat <- read.table("somatic.high_confidence.hg19_multianno.report.tsv", header = TRUE, sep = "\t", as.is = TRUE)
 
@@ -42,13 +39,12 @@ for( i in 1:length(colnames(dat)) )
 {
   for( j in 1:length(colnames(dat)) )
   {
-    comp.mat[i,j] <- fisher.test(
-                table( dat[[ colnames(dat)[i] ]] , 
-                 dat[[ colnames(dat)[j] ]] ) )$p.value
+    t1 <- as.matrix(table(dat[[ colnames(dat)[i] ]]))
+    t2 <- as.matrix(table(dat[[ colnames(dat)[j] ]]))
+    comp.mat[i,j] <- chisq.test( cbind(t1, t2) )$p.value
   }
 }
 
-diag(comp.mat) <- 1
 rownames(comp.mat) <- caller.list 
 colnames(comp.mat) <- caller.list
 
