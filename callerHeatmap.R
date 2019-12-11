@@ -87,3 +87,5 @@ caller_stats <- function(INFILENAME){
 
   write.table(format(comp.mat, scientific = TRUE, digits = 5), paste0(OUTFILENAME, "-stats.txt"), row.names =T, col.names = T, append = F, quote = F)
 }
+
+caller_stats(INFILENAME) 
