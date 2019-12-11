@@ -58,7 +58,7 @@ dat <- melt(dat, measure.vars = colnames(dat))
 n <- dim(dat)[1] / 4
 dat$x <- rep( seq(1:n), 4)
 dat$value <- as.factor(dat$value)
-levels(dat$value) <- c("NO CALL", "REJECT", "PASS")
+levels(dat$value) <- c("NO CALL", "PASS", "REJECT")
 
 p1 <- ggplot(data = dat, aes(x = x, y = variable, fill = value)) + 
   geom_tile() +
@@ -68,7 +68,7 @@ p1 <- ggplot(data = dat, aes(x = x, y = variable, fill = value)) +
          ) +
   guides(fill = guide_legend(title= "Call Status")) +
   ylab("Caller") +
-  scale_fill_manual(labels = c("NO CALL", "REJECT", "PASS"), values = c("blue", "red", "green"))
+  scale_fill_manual(labels = c("NO CALL", "PASS", "REJECT"), values = c("blue", "red", "green"))
 
 png(paste0(OUTFILENAME, ".png"))
 print(p1)
