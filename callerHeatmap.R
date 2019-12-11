@@ -68,7 +68,7 @@ p1 <- ggplot(data = dat, aes(x = x, y = variable, fill = value)) +
          ) +
   guides(fill = guide_legend(title= "Call Status")) +
   ylab("Caller") +
-  scale_fill_manual(labels = c("NO CALL", "PASS", "REJECT"), values = c("blue", "red", "green"))
+  scale_fill_manual(labels = c("NO CALL", "PASS", "REJECT"), values = c("blue", "green", "red"))
 
 png(paste0(OUTFILENAME, ".png"))
 print(p1)
