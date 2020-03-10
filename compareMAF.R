@@ -4,6 +4,17 @@ setwd("C:/Users/jpluta/Desktop/Melanoma/IpiNivo/")
 library(ggplot2)
 library(utils)
 
+args = commandArgs(trailingOnly = TRUE)
+
+if( length(args) < 1)
+  {
+    print("need to provide argument: MAF.THRESH")
+    print("if the difference in MAF between batch1 and batch2 is > MAF.THRESH, tag snp for removal")
+    stop()
+  }
+
+MAF.THRESH <- args[1]
+
 # --------------------------- flipAllele ------------------------------------------- #
 flipAllele <- function( allele )
   # function to orient strand to match reference (snplst)
@@ -120,10 +131,10 @@ batch2 = alignSNPs( batch1, batch2 )
 
 # flag any snps with a MAF difference greater than 10% for removal
 # this value is arbitrary- probably sufficient to capture random error
-flagged.snps = batch2[which(abs(batch1$MAF - batch2$MAF) > 0.1),]
+flagged.snps = batch2[which(abs(batch1$MAF - batch2$MAF) > MAF.THRESH),]
 
 # plot
-ind = which(abs(batch1$MAF - batch2$MAF) > 0.1)
+ind = which(abs(batch1$MAF - batch2$MAF) > MAF.THRESH)
 dat <- data.frame(batch1=batch1$MAF, batch2=batch2$MAF)
 p1 <- ggplot(data=dat,aes(x=batch1, y=batch2)) + geom_point(alpha = 0.25, color="blue") + 
       geom_point(data=dat[ind,], aes(x=batch1, y=batch2), color="red") +
