@@ -102,7 +102,7 @@ convertACtoRLE <- function( vr )
 
 
 
-# ---------------------- createSomSigPlots_NMF ----------------------------- #
+# ---------------------- createSomSigPlots --------------------------------- #
 # get mutational signatures via NMF decomposition
 # create all plots
 #
@@ -203,7 +203,7 @@ convert_to_deconstructSigs_format <- function( dat, gref )
 # ------------------------------------------------------------------ #
 
 
-# --------------------- run_deconstructSigs_grp -------------------- #
+# --------------------- runDeconstructSigs-------------------- #
 runDeconstructSigs <- function( grp_motifs, refBuild )
   # input: grp_motifs, group of vcf files
   #        refBuild (string), a stringscribing the reference build (one of hg19 or hg38)
