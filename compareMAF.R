@@ -1,19 +1,18 @@
 rm(list = ls())
 
-setwd("C:/Users/jpluta/Desktop/Melanoma/IpiNivo/")
 library(ggplot2)
 library(utils)
 
 args = commandArgs(trailingOnly = TRUE)
 
-if( length(args) < 1)
+if( length(args) < 3)
   {
-    print("need to provide argument: MAF.THRESH")
+    print("need to provide argument: file1.frq file2.frq MAF.THRESH")
     print("if the difference in MAF between batch1 and batch2 is > MAF.THRESH, tag snp for removal")
     stop()
   }
 
-MAF.THRESH <- args[1]
+MAF.THRESH <- args[3]
 
 # --------------------------- flipAllele ------------------------------------------- #
 flipAllele <- function( allele )
@@ -89,10 +88,13 @@ alignSNPs <- function( dat1, dat2 )
 # PLINK FREQ FILE:
 # CHR SNP A1(min) A2(Maj) MAF NCHROBS
 
-batch1 <- read.table("batch1.frq",
+BATCH1 <- args[1]
+BATCH2 <- args[2]
+  
+batch1 <- read.table(BATCH1,
                      colClasses=c("character", "character", "character", "character", "numeric", "integer"), 
                     header=TRUE)
-batch2 <- read.table("batch2.frq", 
+batch2 <- read.table(BATCH2, 
                      colClasses=c("character", "character", "character", "character", "numeric", "integer"), 
                      header=TRUE)
 
