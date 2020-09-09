@@ -16,32 +16,32 @@ if("ggdendro" %in% rownames(installed.packages()) == FALSE)
 
 if("SomaticSignatures" %in% rownames(installed.packages()) == FALSE)
 {
-  biocLite("SomaticSignatures")
+  BiocManager::install("SomaticSignatures")
 }
 
 if("deconstructSigs" %in% rownames(installed.packages()) == FALSE)
 {
-  biocLite("deconstructSigs")
+  BiocManager::install("deconstructSigs")
 }
 
 if("SomaticCancerAlterations" %in% rownames(installed.packages()) == FALSE)
 {
-  biocLite("SomaticCancerAlterations")
+  BiocManager::install("SomaticCancerAlterations")
 }
 
 if("BSgenome.Hsapiens.UCSC.hg38" %in% rownames(installed.packages()) == FALSE)
 {
-  biocLite("BSgenome.Hsapiens.UCSC.hg38")
+  BiocManager::install("BSgenome.Hsapiens.UCSC.hg38")
 }
 
 if("BSgenome.Hsapiens.UCSC.hg19" %in% rownames(installed.packages()) == FALSE)
 {
-  biocLite("BSgenome.Hsapiens.UCSC.hg19")
+  BiocManager::install("BSgenome.Hsapiens.UCSC.hg19")
 }
 
 if("rtracklayer" %in% rownames(installed.packages()) == FALSE)
 {
-  biocLite("rtracklayer")
+  BiocManager::install("rtracklayer")
 }
 
 if("ggplot2" %in% rownames(installed.packages()) == FALSE)
