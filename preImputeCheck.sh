@@ -2,8 +2,7 @@
 
 # pluta 4/3/2017
 
-# script to split plink file by chromosome, convert into vcf format, and check s
-ome parameters
+# script to split plink file by chromosome, convert into vcf format, and check some parameters
 # against HRC data (essentially pre phasing)
 
 # phasing is handled by the HRC
