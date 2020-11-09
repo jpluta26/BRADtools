@@ -23,7 +23,7 @@ BFILE=$1
 OUTNAME=$2
 EIGPATH=/home/jpluta/EIG-6.1.4/bin
 OUTDIR=/project/knathanslab/TECAC/PCA
-STDYDIR=/project/knathanslab/TECAC/PCA
+
 
 BED=${1}.bed
 BIM=${1}.bim
