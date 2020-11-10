@@ -34,6 +34,8 @@ for( i in unique(dat$CHR))
 	ind <- match(tmp$MarkerName, ref$V1)
 	tmp$rsid <- ref$V2[ind]
 	tmp <- tmp[ ,colnames(tmp) %in% c("MarkerName", "rsid")]
-
-	write.table(tmp, OUTFILE, col.names = T, row.names = F, quote = F, append = F)
 }
+
+
+			
+write.table(tmp, OUTFILE, col.names = T, row.names = F, quote = F, append = F)
