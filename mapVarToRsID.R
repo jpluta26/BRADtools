@@ -10,7 +10,10 @@ library(data.table)
 args = commandArgs(trailingOnly = TRUE)
 if(length(args) < 2)
 {
-  stop('need to provide arguments: SNPLST, a text file of snps in chr:pos format')
+  print('need to provide arguments: ')
+  print('SNPLST, a text file of snps in chr:pos format')
+  print('OUTFILE, a string of the output file name')
+  stop()
 }
 
 INFILE  = args[1]
