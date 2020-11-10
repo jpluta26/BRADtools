@@ -24,6 +24,8 @@ dat$MarkerName <- as.character(dat$V1)
 dat$CHR <- unlist(lapply(strsplit(dat$MarkerName, ":"), function(x) x[1]))
 dat$BP <- unlist(lapply(strsplit(dat$MarkerName, ":"), function(x) x[2]))
 
+out <- c()
+			
 for( i in unique(dat$CHR))
 {
   # change this line if running else where
@@ -33,9 +35,9 @@ for( i in unique(dat$CHR))
 	tmp <- dat[ dat$CHR == i,]
 	ind <- match(tmp$MarkerName, ref$V1)
 	tmp$rsid <- ref$V2[ind]
-	tmp <- tmp[ ,colnames(tmp) %in% c("MarkerName", "rsid")]
+	out <- rbind(tmp[ ,colnames(tmp) %in% c("MarkerName", "rsid")], out)
 }
 
 
 			
-write.table(tmp, OUTFILE, col.names = T, row.names = F, quote = F, append = F)
+write.table(out, OUTFILE, col.names = T, row.names = F, quote = F, append = F)
