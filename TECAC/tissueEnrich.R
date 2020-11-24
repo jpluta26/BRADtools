@@ -10,7 +10,7 @@ library(ggplot2)
 library(dplyr)
 library(reshape2)
 library(SummarizedExperiment)
-
+library(TissueEnrich)
 
 
 # ----------------------------- reorderCols --------------------------- #
