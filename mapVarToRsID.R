@@ -28,7 +28,7 @@ dat$BP <- unlist(lapply(strsplit(dat$MarkerName, ":"), function(x) x[2]))
 
 out <- c()
 			
-if(!(BUILD %in% c("grch37", "grch38"))
+if(!(BUILD %in% c("grch37", "grch38")))
 {
 	   stop("invalid option for build")
 }
