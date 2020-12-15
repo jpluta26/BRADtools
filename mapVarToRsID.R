@@ -36,7 +36,7 @@ if(!(BUILD %in% c("grch37", "grch38"))
 for( i in unique(dat$CHR))
 {
   # change this line if running else where
-	REFFILE <- paste("/project/knathanslab/REF/HHRC/", BUILD, "HRC-chrbp-rsid-map-chr", i, ".txt", sep = "")
+	REFFILE <- paste("/project/knathanslab/REF/HHRC/", BUILD, "/HRC-chrbp-rsid-map-chr", i, ".txt", sep = "")
 	ref <- as.data.frame(fread(REFFILE, header = F))
 
 	tmp <- dat[ dat$CHR == i,]
