@@ -45,6 +45,7 @@ for( i in unique(dat$CHR))
 	out <- rbind(tmp[ ,colnames(tmp) %in% c("MarkerName", "rsid")], out)
 }
 
-
+dat$rsid <- out$rsid[match(dat$MarkerName, out$MarkerName)]
+dat <- dat[order(as.numeric(dat$CHR), dat$BP),]
 			
-write.table(out, OUTFILE, col.names = T, row.names = F, quote = F, append = F)
+write.table(dat[,colnames(dat) %in% c("MarkerName", "rsid")], OUTFILE, col.names = T, row.names = F, quote = F, append = F)
