@@ -8,7 +8,7 @@ library(data.table)
 # this will only work on the hpc
 
 args = commandArgs(trailingOnly = TRUE)
-if(length(args) < 2)
+if(length(args) < 3)
 {
   print('need to provide arguments: ')
   print('SNPLST, a text file of snps in chr:pos format')
