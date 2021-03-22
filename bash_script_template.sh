@@ -46,7 +46,7 @@ CMD="exe -opt1 $VAR1
 	 -out  $OUT"
 
 # run the command
-eval $CMD
+eval $CMD > logfile.log
 
 # if the command failed to run, report an error
 if [ $? -ne 0 ]
