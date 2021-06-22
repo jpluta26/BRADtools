@@ -22,7 +22,7 @@ HEADNODE="consign.hpc.local"
 
 if [ "$HOSTNAME" == "$HEADNODE" ]
 then
-  echo "dont run scripts on the head node!"
+  echo "dont run scripts on the head node"
   exit 1
 fi
 
