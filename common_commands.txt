@@ -4,3 +4,6 @@ sed '/^[[:space:]]*$/d' INFILE
 # remove duplicate snps
 # this is very difficult in plink
 ~/bcftools-1.3.1/bcftools norm -d both $INVCF -O z -o $OUTVCF
+
+# merge gwas results into one file with columns MarkerName and P-value
+tail -n +2 *priorint.irae.txt | grep -v "==>" | sed '/^[[:space:]]*$/d' | awk '{print $8, $7}' > tmp
