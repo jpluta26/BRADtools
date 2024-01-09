@@ -2,7 +2,7 @@
 # pluta 9/18/18
 library(data.table)
 library(qqman)
-
+library(ggplot2)
 # script to create manhattan plot of either a single chromosome of the whole genome
 # this script greatly increases the speed of plotting by subsampling a small fraction
 # of the non-significant snps
