@@ -1,6 +1,5 @@
 #!/usr/bin/env Rscript
 # pluta 9/18/18
-module load R/4.2
 library(data.table)
 library(qqman)
 
