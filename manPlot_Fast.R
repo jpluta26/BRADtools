@@ -107,11 +107,12 @@ if( any(dat$CHR == "X"))
 
 dat$CHR <- as.numeric(dat$CHR)
 colnames(dat) <- c("rsid", "p", "chr", "bp")
-chrlabs <- as.character(seq(1:length(unique(dat$CHR))))
+chrlabs <- as.character(seq(1:length(unique(dat$chr))))
 dat$p <- as.numeric(dat$p)
 
-# remove any rsids that snuck in
+# remove any rsids that snuck in, or any models that failed
 dat <- dat[!is.na(dat$chr),]
+dat <- dat[!is.na(dat$p),]
 			
 print("done!")
 
