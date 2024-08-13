@@ -12,7 +12,7 @@ if [ $NPARAM -lt 3 ]
 then
 	echo ""
 	echo "USAGE :: "
-	echo "FILE1 = the root name of plink file 1 (no .bed/bim/fam")
+	echo "FILE1 = the root name of plink file 1 (no .bed/bim/fam)"
 	echo "FILE2 = the root name of plink file 2"
 	echo "OUTNAME = the root name of the output file"
 	echo ""
