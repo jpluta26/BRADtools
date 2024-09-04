@@ -7,3 +7,6 @@ sed '/^[[:space:]]*$/d' INFILE
 
 # merge gwas results into one file with columns MarkerName and P-value
 tail -n +2 *priorint.irae.txt | grep -v "==>" | sed '/^[[:space:]]*$/d' | awk '{print $8, $7}' > tmp
+
+# convert bim file from chr:pos:alt:ref to chr:pos
+awk '$2=substr($2,1,length($2)-4) {print $0}' file.bim
