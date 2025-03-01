@@ -1,0 +1,573 @@
+---
+title: "CNV_report"
+author: "John Pluta"
+date: "10/4/2022"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(scales)
+library(ggplot2)
+library(knitr)
+library(kableExtra)
+library(tidyverse)
+library(dplyr)
+library(ggpubr)
+library(RColorBrewer)
+library(annotate)
+library(TxDb.Hsapiens.UCSC.hg19.knownGene)
+library(org.Hs.eg.db)
+library(GenomicRanges)
+```
+
+
+```{r functions, include = FALSE}
+
+
+getSnpsInLD <- function(RDATA, r2.thresh = 0.5)
+{
+  load(RDATA)
+  metal <- metal[!is.na(metal$LD),]
+  snpsInLD <- metal[which(metal$LD > r2.thresh), ]
+  snpsInLD$MarkerName <- as.character(snpsInLD$MarkerName)
+  snpsInLD$MarkerName <- substr(snpsInLD$MarkerName, 4, nchar(snpsInLD$MarkerName))
+  return(snpsInLD$MarkerName)
+}
+
+# ---------------------------------------------------------------- #
+exprCNVPlot <- function( cnv, expr, cpg, GENENAME)
+# create the expr by CNV box plot
+{
+  
+  
+  dat <- data.frame(expr = expr, 
+                    cnv = as.factor(cnv), 
+                    cpg = cpg)
+  
+  if(any(table(dat$cnv) < 3))
+  {
+    dat <- dat[ dat$cnv != names(which(table(dat$cnv) == 1)),]
+  }
+  # if(any(dat$expr == 0))
+  # {
+  #   dat  <- dat[ dat$expr != 0, ]
+  # }
+  
+  # plot CNV against expression after correcting for the effect of cpg methylation
+  dat$res <- lm( data = dat, log2(expr + 0.001) ~ cpg)$residuals
+  
+  rho <- round(cor(as.integer(dat$cnv), dat$res),2)
+  p.value <- cor.test(as.integer(dat$cnv), dat$res, method = "pearson")$p.value
+  
+  p.value = if_else(
+    p.value < 0.0001, 
+    formatC(p.value, digits = 4, format = "e"), 
+    formatC(p.value, digits = 4, format = "f", drop0trailing = FALSE))
+
+ # p1 <- ggboxplot(data = dat,
+ #                       x = "cnv", y = "res",
+ #                       color = "cnv", xlab = "CNV State",
+ #                       submain = paste0("r = ", rho, ", p = ", p.value),
+ #                       ylab = "log2(FPKM)", title = GENENAME,
+ #                       legend.title = "Copy Number") + 
+ #                       theme(legend.position = "right") 
+ cor.out <- c(GENENAME, rho, p.value)
+  
+ p1 <- ggplot(data = dat, aes(x = cnv, y  = res, fill = cnv), color = "black") +
+   geom_violin() +
+   geom_boxplot(width = 0.2, fill = "white") +
+   geom_point() +
+   xlab("CNV State") +
+   ylab("log2(FPKM)") +
+   ggtitle(GENENAME) +
+   guides(fill=guide_legend(title="CNV State")) +
+  theme_bw()
+
+  return(list(p1,cor.out))
+}
+# ---------------------------------------------------------------- #
+
+
+# ---------------------------------------------------------------- #
+formatExprData <-  function( dat, type )
+{
+  dat  <- t(dat)
+  n <- dim(dat)[1]
+  m <- dim(dat)[2]
+  
+  colnames(dat)  <- c(dat[n,1:m])
+  dat <- dat[-which(rownames(dat) %in%  "GeneName"),]
+  
+  if( type ==  "cnv" )
+  {
+    dat <- apply(dat, 2, as.integer)
+  } else
+  {
+    dat <- apply(dat, 2, as.numeric)
+  }
+  
+  return(dat)
+}
+# ---------------------------------------------------------------- #
+
+
+
+
+
+
+# ---------------------------------------------------------------------------- #
+formatOutput <- function( output )
+  # if p-value is < 0.0001, change to scientific notation
+  # NOTE: within the function, everything works as intended. however when the 
+  # function is called, the output is written to an extra column, 'p', while 
+  # 'p-value' is unchanged. yet still works as intended when writing the table.
+{
+  
+  tab = as.data.frame(output) %>% mutate(
+    `p-value` = if_else(
+      `p-value` < 0.0001, 
+      formatC(`p-value`, digits = 4, format = "e"), 
+      formatC(`p-value`, digits = 4, format = "f", drop0trailing = FALSE)
+    )
+  )
+  return(tab)
+}
+# ---------------------------------------------------------------------------- #
+
+# ------------------------------------------------------------- #
+makeManPlot <- function( dat, TITLE,  ymax = NULL)
+  # create manhattan plot of CNVRs
+  # dat (data.frame), the CNVR data
+  # TITLE (character), title of the plot
+  # ymax (numeric), set a  manual scale for the plot
+{
+  
+  if( is.null(ymax))
+  {
+    ymax <- range(-log10(dat$p))[2]
+  }
+  # convert bp to cumulative bp
+  for( i in 1:dim(dat)[1])
+  { 
+    dat[i,] <- adjustBp( dat[i,], chromLength37)
+    
+  }
+  
+ 
+  # setup the plot
+  p1 <- ggplot(data = dat, 
+               aes(x = bp, y = -log10(p), color = as.factor(Chr))) + 
+    geom_hline(yintercept = -log10(5e-08), col = "blue", lty = "dashed") +
+    geom_vline(xintercept = 0, color = "gray") +
+    geom_hline(yintercept = 0, color = "gray") +
+    geom_label(data = dat[ dat$p <= 1e-05,], aes(label = CNVR_ID, col = "black"), hjust = 1.1 ) +
+    ggtitle(TITLE) +
+    scale_color_manual(values = c("1" = "blue",
+                                  "2" = "black",
+                                  "3" = "blue",
+                                  "4" = "black",
+                                  "5" = "blue",
+                                  "6" = "black",
+                                  "7" = "blue",
+                                  "8" = "black",
+                                  "9" = "blue",
+                                  "10" = "black",
+                                  "11" = "blue",
+                                  "12" = "black",
+                                  "13" = "blue",
+                                  "14" = "black",
+                                  "15" = "blue",
+                                  "16" = "black",
+                                  "17" = "blue",
+                                  "18" = "black",
+                                  "19" = "blue",
+                                  "20" = "black",
+                                  "21" = "blue",
+                                  "22" = "black")) + 
+    geom_point(size= 2.5) + 
+    geom_hline(yintercept = -log10(1e-05), col = "red", lty = "dashed") + 
+    
+    scale_y_continuous(breaks = c(0,5,10,15,20,25), labels = as.character(c(0,5,10,15,20,25))) +
+    scale_x_continuous(breaks = x.axis.breaks, labels = as.character(seq(1:22))) +
+    
+    xlab("Position") +
+    theme_minimal() +
+    ylim(0, ymax) + 
+    theme(legend.position = "none",
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank())
+  
+  return(p1)
+  
+}
+# ------------------------------------------------------------- #
+
+makeResultsTable <- function( dat )
+{
+  tab <- dat[ dat$p < 1e-05, ]
+  tab$display <- paste0(round(tab$B,2)," (", round(tab$B.se,2), ")")
+  tab <- tab[, colnames(tab) %in% c("CNVR_ID", "Chr", "Start", "End", "display","Type", "p")]
+  tab <- tab[,c(1,2,3,4,5,7,6)]
+  colnames(tab) <- c("CNVR_ID", "Chr", "Start", "End", "Type", "Coef.", "p-value")
+  rownames(tab) <- NULL
+  return(formatOutput(tab))
+}
+
+# ------------------------------------------------------------- #
+adjustBp <- function( dat , chromLength37)
+  # adjust bp to be cumulative bp for x-axis
+  # input: dat (data.frame), contains snp/p-value information
+  #     chromLength37 (vector), chromosomal lengths
+  # 
+  # output: dat, with cumulative bp stored in the var "bp"
+{
+  
+  CHR <- dat[["Chr"]]
+  if( CHR > 1)
+  {
+    dat[["bp"]] <- dat[["Start"]] + sum(chromLength37[1:(CHR-1)])
+  }
+  
+  return(dat)
+}
+# ------------------------------------------------------------- #
+
+getGenesInCNVR <- function( CNVR_ID, dat)
+{
+  return(
+    paste(unique(dat$name2[ dat$ID == CNVR_ID]), collapse = ", ")
+    )
+}
+```
+
+```{r constants, include = FALSE}
+
+# grch37 chromosomes positions
+chromLength37 <- c(249250621, 243199373, 198022430, 
+                   191154276, 180915260, 171115067, 159138663, 146364022, 
+                   141213431, 135534747, 135006516, 133851895, 115169878, 
+                   107349540, 102531392, 90354753, 81195210, 78077248, 59128983, 
+                   63025520, 48129895, 51304566)
+
+# set ticks and position for the x-axis
+# this is the chromosome number plotted at the halfway point of each chromosome
+x.axis.breaks <- rep(0,22)
+
+for(i in 1:22 )
+{
+  if( i == 1 )
+  {
+    x.axis.breaks[i] <- chromLength37[1]/2
+  } else
+  {
+    x.axis.breaks[i] <- sum(chromLength37[1:(i - 1)]) + (chromLength37[i]/2)
+  }
+  
+}
+
+
+txdb <- TxDb.Hsapiens.UCSC.hg19.knownGene
+CNVRRESFILE="~/Documents/NathansonLab/TGCT_CNV/results_dup/dup_res.txt"
+ANNOTFILE="~/Documents/NathansonLab/TGCT_CNV/results_dup/interval_annotation.txt"
+
+# load the probe data
+probe.dat <- read.table("~/Documents/NathansonLab/TGCT_CNV/IKN_TECAC_reclusterx14520.bim", header  = FALSE)
+probe.dat <-  probe.dat[ probe.dat$V1 > 0 & probe.dat$V1 < 23,]
+colnames(probe.dat) <- c("chr", "rsid", "gd", "bp", "a1", "a2")
+
+# list of association results
+cnvr.dat <- read.table(CNVRRESFILE, header = TRUE, sep = " ")
+annot.dat  <- read.table(ANNOTFILE, header = TRUE, sep = "\t")
+cnvr.dat <- cnvr.dat[ cnvr.dat$CNVR_ID == "CNVR_1661",]
+cnvr.ids <- "CNVR_1661"
+
+# prep eqtl data
+eqtl <- read.table("~/Documents/NathansonLab/TGCT_CNV/sig_cis_hg38_lifted.txt", header = TRUE)
+eqtl$Chr <- as.integer(unlist(lapply(strsplit(eqtl$hg19_varID, ":"), function(x) x[1])))
+
+eqtl <- eqtl[!is.na(eqtl$Chr),]
+eqtl$bp <- as.integer(unlist(lapply(strsplit(eqtl$hg19_varID, ":"), function(x) x[2])))
+eqtl$Start <- eqtl$bp
+eqtl$log10p <- -log10(eqtl$nom_pval)
+eqtl$hg19_varID <- substr(eqtl$hg19_varID, 1, nchar(eqtl$hg19_varID) - 4)
+eqtl <- eqtl[ eqtl$bp > 107516115 & eqtl$bp < 107885577 & eqtl$Chr == 9,]
+
+# use LD data to group snps
+eqtl$snpgrp <- 0
+eqtl$snpgrp[ eqtl$hg19_varID %in% getSnpsInLD("~/Documents/NathansonLab/TGCT_CNV/results_dup/220803_9_107685577/chr9_107435577-107935577.Rdata", 0.6) ] <- 1
+eqtl$snpgrp[ eqtl$hg19_varID %in% getSnpsInLD("~/Documents/NathansonLab/TGCT_CNV/results_dup/220803_9_107736145/chr9_107486145-107986145.Rdata", 0.6) ] <- 2
+eqtl$snpgrp[ eqtl$hg19_varID %in% getSnpsInLD("~/Documents/NathansonLab/TGCT_CNV/results_dup/220804_9_107692229/chr9_107442229-107942229.Rdata", 0.6) ] <- 3
+eqtl$snpgrp[ eqtl$hg19_varID %in% getSnpsInLD("~/Documents/NathansonLab/TGCT_CNV/results_dup/220803_9_107742481//chr9_107492481-107992481.Rdata", 0.6) ] <- 4
+eqtl$snpgrp[ eqtl$hg19_varID %in% getSnpsInLD("~/Documents/NathansonLab/TGCT_CNV/results_dup/220806_9_107690057/chr9_107440057-107940057.Rdata", 0.6)] <- 5
+eqtl$snpgrp <- as.factor(eqtl$snpgrp)
+
+
+```
+
+
+# CNVWAS
+
+```{r echo = FALSE, warning = FALSE, include = FALSE}
+del.dat <- read.table("/Users/johnpluta/Documents/NathansonLab/TGCT_CNV/results_del/del_res.txt", header = TRUE)
+del.dat$bp <- del.dat$Start
+
+# ymax from duplications to put plots on the same scale
+manplotdel <- makeManPlot( del.dat, "Deletions", ymax = 26.92996)
+
+dup.dat <- read.table("/Users/johnpluta/Documents/NathansonLab/TGCT_CNV/results_dup/dup_res.txt", header = TRUE)
+dup.dat$bp <- dup.dat$Start
+manplotdup <- makeManPlot( dup.dat, "Duplications")
+
+
+```
+
+
+```{r echo = FALSE, fig.align = "center", out.width = "75%", warning = FALSE, message = FALSE, results = FALSE}
+print(manplotdup)
+```
+
+
+```{r echo = FALSE, fig.align = "center", out.width = "75%", warning = FALSE, message = FALSE, results = FALSE}
+print(manplotdel)
+```
+
+
+```{r echo = FALSE, results = "asis", message = FALSE, warning = FALSE}
+
+results.tab <- rbind(makeResultsTable(dup.dat), makeResultsTable(del.dat))
+kable(results.tab,
+    format = "latex",
+      booktabs = TRUE,
+      caption = 'Significant CNVRs',
+      align = 'cccccc') %>%
+  kable_styling(latex_options = c("striped", "HOLD_position"), full_width = FALSE) %>%
+  footnote(threeparttable = TRUE,  general = "CNVRs significant at p < 1e-05. The table includes location and size of CNVR, gain or deletion, and mean and standard deviation of estimated effect.",
+           general_title = "")
+
+all.cnvrs <- c( del.dat$CNVR_ID[del.dat$p < 1e-05], dup.dat$CNVR_ID[dup.dat$p < 1e-05])
+gene.tab <- data.frame(CNVR = all.cnvrs, 
+                       Genes = apply(as.matrix(all.cnvrs), 1, getGenesInCNVR, annot.dat[annot.dat$ID %in% all.cnvrs,]))
+
+kable(gene.tab,
+    format = "latex",
+      booktabs = TRUE,
+      caption = 'Genes overlapping CNVRs',
+      align = 'cccccc') %>%
+  kable_styling(latex_options = c("striped", "HOLD_position"), full_width = FALSE) %>%
+  footnote(threeparttable = TRUE,  general = "All genes that partially or complete overlap significant CNVRs.",
+           general_title = "") %>% 
+  column_spec(2, width = "6in")
+```
+
+
+# Expression
+
+We examined the association of copy number state and expression (log2(FPKM)). Expression was adjusted to account for the effect of cPg-methylation by taking the residuals from a linear model. Copy number is assumed to be additive. Expression is measured for all genes that overlap with a CNVR, except for TAS2R16, which did not have enough observations to model.
+
+```{r echo = FALSE, fig.align = "center", out.width = "75%", warning = FALSE}
+cnv  <- formatExprData(read.table("~/Documents/NathansonLab/TGCT_CNV/expression/TCGAcnvMatrix.txt", header =  TRUE), "cnv")
+expr <- formatExprData(read.table("~/Documents/NathansonLab/TGCT_CNV/expression/TCGAexpressionMatrix.txt", header  = TRUE), "expr")
+cpg  <- formatExprData(read.table("~/Documents/NathansonLab/TGCT_CNV/expression/TCGAcpgmethMatrix.txt", header = TRUE), "cpg")
+
+# need to check that all matrices are in the same order
+expr <- expr[ ,match(colnames(cnv), colnames(expr))]
+cpg <- cpg[ ,match(colnames(cnv), colnames(cpg))]
+
+if( !( all(colnames(cnv) == colnames(expr)) ))
+{
+  if( !(all(colnames(cnv) == colnames(cpg))))
+  {
+    stop("colname mismatch")
+  }
+}
+
+cor.tab <- c()
+for( i in 1:dim(cnv)[2])
+{
+  genename <- colnames(cnv)[i]
+  
+  # need at least 3 observations
+  if( sum(expr[,i] != 0) > 2)
+  {
+     out <- exprCNVPlot( cnv[,i], expr[,i], cpg[,i], genename)
+     print(out[[1]])
+     cor.tab <- rbind( cor.tab, out[[2]])
+  } 
+ 
+}
+
+colnames(cor.tab) <- c("Gene", "r", "p-value")
+```
+
+
+```{r echo = FALSE, results = "asis", message = FALSE, warning = FALSE}
+kable(cor.tab,
+    format = "latex",
+      booktabs = TRUE,
+      caption = 'Correlation of Copy Number and Expression',
+      align = 'ccc' ) %>%
+  kable_styling(latex_options = c("striped", "HOLD_position"), full_width = FALSE) %>%
+  footnote(threeparttable = TRUE,  general = "Pearson correlation and p-value of copy number and expression, corrected for cPg methylation. NIPSNAP3A, NIPSNAP3B, and ABCA1 show a statistically significant and positive correlation. SLC13A1 and ATF7IP show a similar relationship but is effected by outliers.",
+           general_title = "")
+```
+
+# Annotation
+```{r echo = FALSE, warning = FALSE}
+
+
+# ABCA1 - ENSG00000165029
+# NIPSNAP3A - ENSG00000136783
+# NIPSNAP3B - ENSG00000165028
+# get recombination rate data
+load("~/Documents/NathansonLab/TGCT_CNV/results_dup/220804_9_107650033/chr9_107400033-107900033.Rdata")
+
+exonCoords <- exonsBy(txdb, "gene")
+
+# get the mapping of entrez ID to genename
+map <- getSYMBOL(names(exonCoords[ seqnames(exonCoords) == "chr9"]), data = 'org.Hs.eg')
+ind <- which(map %in% c("ABCA1", "NIPSNAP3A", "NIPSNAP3B"))
+
+exonCoords <- unlist(exonCoords[ind])
+exon.dat <- data.frame(start = exonCoords@ranges@start,
+                       end = exonCoords@ranges@start + exonCoords@ranges@width)
+
+cnvr.dat <- data.frame( chr = cnvr.dat$Chr[ cnvr.dat$CNVR_ID == "CNVR_1661" ],
+                        start = cnvr.dat$Start[ cnvr.dat$CNVR_ID == "CNVR_1661" ],
+                        end = cnvr.dat$End[ cnvr.dat$CNVR_ID == "CNVR_1661"],
+                        id = "CNVR_1661")
+cnvr.size <- cnvr.dat$end - cnvr.dat$start
+
+plot.label <- paste0( "chr", cnvr.dat$chr, ":", cnvr.dat$start, "-", cnvr.dat$end)
+ gene.dat <- annot.dat[ which(annot.dat$ID == cnvr.dat$id), ]
+  gene.dat <- gene.dat[ !duplicated(gene.dat$name2), ]
+  
+df <- data.frame( start = gene.dat$Start, end = gene.dat$End, name = gene.dat$name2)
+
+df$position <- 2
+
+xmin <- min(c(cnvr.dat$start, df$start))  - (cnvr.size/4)
+xmax <- 107697500
+
+
+
+p1 <- ggplot(data = df) + 
+  
+  geom_segment(aes(x = start, xend = end, y = position, yend = position), size = 4, color = "blue") +
+  geom_segment(data = cnvr.dat, aes(x = start, xend = end, y = 1,  yend = 1), size = 4, color = "red") +
+ 
+  # xstart is the midpoint of NIPSNAP3B
+  # xend is the midpoint of lnc-NIPSNAP3B
+  # grch37
+  geom_curve(data = NULL, aes(x = (df$start + ((df$end - df$start) / 2))[[which(df$name == "NIPSNAP3B")]], 
+                              y = position, 
+                              xend = 107689834 +  (107691173 - 107689834)/2, 
+                              yend = position), 
+             curvature = .2, color = "gray", linetype = "dashed") +
+  geom_segment(data = NULL, aes(x = 107689834, xend = 107691173, y = 2, yend = 2), 
+                 size =4 ,color = "red") +
+  geom_point(data = eqtl[ eqtl$bp > 107516115 & eqtl$bp < 109685577 & eqtl$Chr == 9,],
+             aes(x = bp, y = rescale(log10p, to = c(2,4)), fill=snpgrp), color="black",  pch=21) +
+  scale_fill_brewer(palette = "Set1") +
+  geom_segment(data = exon.dat, aes(x = start, xend = end, y = 2, yend = 2),
+               size = 4,  color = "lightgray") +
+  # geom_segment(data = getUTRs(txdb, 3, 9, 107500000, 107700000), aes(x = x, xend = xend, y = y, yend = yend),
+  #              size = 4, color = "black") +
+  # geom_segment(data = getUTRs(txdb, 5, 9, 107500000, 107700000), aes(x = x, xend = xend, y = y, yend = yend),
+  #              size = 4, color = "purple") +
+  # ABCA1 promoter region
+  geom_segment(data = NULL, aes(x = 107543287, xend = 107543287 + 2500, y = 2, yend = 2),
+               size = 4, color = "yellow") +
+  
+  # this comes from the loaded R data
+  geom_line(data = recrate, aes(x = pos * 1e6, y = rescale(recomb, to = c(0,0.9))), col = "black") +
+  
+  # coordinates for lnc-NIPSNAP3B
+  geom_label(data = cnvr.dat, aes(x  = 107689834 +  (107691173 - 107689834)/2, y = 1.7, 
+                                  label = "lnc-NIPSNAP3B", color = "red")) +
+  
+  geom_vline(xintercept = cnvr.dat$start, linetype = "dashed", color = "red") +
+  geom_vline(xintercept = cnvr.dat$end, linetype = "dashed", color = "red") +
+  geom_label(data = df[ df$name == "NIPSNAP3A",], aes(x = start +  (end - start)/2, y = position * 1.3, label = name),
+             size = 4) +
+  geom_label(data = df[ df$name == "NIPSNAP3B",], aes(x = start +  (end - start)/2, y = position * 1.12, label = name),
+             size = 4) +
+  geom_label(data = df[ df$name == "ABCA1",], aes(x = start +  (end - start)/2, y = position * 1.12, label = name),
+             size = 4) +
+  geom_label(data = cnvr.dat, aes(x  = start +  (end - start)/2, y = 1.22, label = id)) +
+  
+  xlim( xmin, xmax) + 
+  xlab("Position") +
+  ggtitle(plot.label) +
+  theme_bw() +
+  ylim(0,4) +
+  theme(axis.ticks.y = element_blank(),
+        axis.text.y = element_blank(),
+        axis.title.y = element_blank(),
+        aspect.ratio = 5/10,
+        legend.position="none") 
+
+  probe.dat <- probe.dat[  probe.dat$chr == cnvr.dat$chr &
+                             probe.dat$bp >= xmin &
+                             probe.dat$bp <=  xmax, ]
+  probe.dat$pos   <- 1
+  p1 <- p1 + geom_point(data = probe.dat, aes(bp, pos),
+                        stat= "identity", shape = 108, size = 3)
+  
+p2<-  ggplot() + 
+  
+  # plot the full region then truncate with xlim; need all options of snpgrp to be
+  # represented to match the large plot
+  geom_point(data = eqtl[  eqtl$Chr == 9,], 
+             aes(x = bp, y = log10p, fill = snpgrp), color = "black", pch=21, size = 3) +
+  scale_fill_brewer(palette = "Set1")  +
+  theme_bw() +
+
+  xlim( min(eqtl$bp[eqtl$Chr == 9]), 107697500) +
+  geom_segment(data = NULL, aes(x = min(eqtl$bp[eqtl$Chr == 9]), xend = 107690436, y = 4, yend = 4), color = "lightblue", size = 4) +
+  geom_vline(xintercept = 107691173, color = "red", linetype = "dashed") +
+  geom_segment(data = NULL, aes(x = 107689834, xend = 107691173, y = 4, yend = 4), 
+               color = "darkblue", size = 4) +
+  geom_vline(xintercept = 107689834, color = "red", linetype = "dashed")  +
+geom_segment(data = exon.dat, aes(x = start, xend = end, y = 4, yend = 4),
+                          size = 4,  color = "lightgray") +
+theme(legend.position="none")
+
+```
+
+
+```{r echo = FALSE, fig.align = "center", out.width = "100%", warning = FALSE, fig.cap = "CNVR1661 overlaps with NIPSNAP3A, fully contains NIPSNAP3B, and overlaps with the promoter region (yellow) or ABCA1. All eQTLs point to lnc-NIPSNAP3B. Exons are denoted in gray among the genes, while probes are in black along the CNVR. Recombination rate is plotted at the bottom. SNPs are colored according to LD (r2 >= 0.6)."}
+print(p1)
+```
+
+```{r echo = FALSE, fig.align = "center", out.width = "100%", warning = FALSE, fig.cap = "Zoomed in view of lnc-NIPSNAP3B."}
+print(p2)
+```
+
+# Interpretation
+
+ABCA1 mediates the transfer of cellular cholesterol across the plasma membrane to apolipoprotein A-I. The efflux function of ABCA1 has anti-cancer activity that is compromised following inhibition of expression by oncogenic or loss-of-function mutations. ABCA1 deficiency permits increased mitochondrial cholesterol and inhibits the release of mitochondrial cell death-promoting molecules, facilitating cancer cell survival (Smith & Land, 2012). ABCA1 Mutations in ABCA1 yield diminish its tumor suppressor functions in patients with chronic myelomonocytic leukemia (Viaud et al., 2020). Low expression of ABCA1 has been linked to worse outcomes in several cancer types including prostate, glioblastoma, pancreatic, breast, lung, and ovarian (Wu et al., 2022).
+
+NIPSNAP3A (NIPSNAP4) and NIPSNAP3B (NIPSNAP3) are homoglous genes with putative roles in vesicular trafficking. ABCA1 is also a regulator of vesicular trafficking, and the close proximity of the genes may indicate a functional relationship. (Buechler et al., 2004). The NIPSNAP family interacts with a variety of mitochondrial and cytoplasmic proteins, and have been implicated in multiple cellular processes associated with different physiologic and pathologic conditions including cancer. (Fathi et al., 2021). NIPSNAP1 and NIPSNAP2 are active in the regulation of mitophagy (Abudu et al., 2019).
+
+# Next Steps
+
+Determine pathogenicity of CNVs? https://github.com/Genotek/ClassifyCNV
+
+(Han et al., 2020) annotated CNVRs with transcription start sites, open chromatin, TAD domains, and CTCF binding sites as a proxy for TAD boundaries. Also PFC enhancer annotations, generated by overlapping cross-tissue DNase-seq and ATAC-seq assay information with H3K27ac CHIP-seq peaks. Regions overlapping H3K4me3 peaks and within 2kb of a TSS were exlucded from the set of enhancers. Promoters are gene specific, genes predicted to be the targets of enhancers from Hi-C were most useful.
+
+# References 
+
+Smith B, Land H. Anticancer activity of the cholesterol exporter ABCA1 gene. Cell Rep. 2012 Sep 27;2(3):580-90. doi: 10.1016/j.celrep.2012.08.011. Epub 2012 Sep 13. PMID: 22981231; PMCID: PMC3462268.
+
+Viaud et al., 2020. ABCA1 exterts tumor-suppressor function in myeloproliferative neoplasms. Cell Reports 30, 3397–3410
+
+Wu K, Zou L, Lei X, Yang X. Roles of ABCA1 in cancer. Oncol Lett. 2022 Aug 19;24(4):349. doi: 10.3892/ol.2022.13469. PMID: 36072007; PMCID: PMC9434721.
+
+Buechler C, Bodzioch M, Bared SM, Sigruener A, Boettcher A, Lapicka-Bodzioch K, Aslanidis C, Duong CQ, Grandl M, Langmann T, Dembinska-Kiec A, Schmitz G. Expression pattern and raft association of NIPSNAP3 and NIPSNAP4, highly homologous proteins encoded by genes in close proximity to the ATP-binding cassette transporter A1. Genomics. 2004 Jun;83(6):1116-24. doi: 10.1016/j.ygeno.2003.12.011. PMID: 15177564.
+
+Fathi, E., Yarbro, J. M., & Homayouni, R. (2021). NIPSNAP protein family emerges as a sensor of mitochondrial health. BioEssays, 43, e2100014. https://doi.org/10.1002/bies.202100014
+
+Abudu YP, Pankiv S, Mathai BJ, Lamark T, Johansen T, Simonsen A. NIPSNAP1 and NIPSNAP2 act as "eat me" signals to allow sustained recruitment of autophagy receptors during mitophagy. Autophagy. 2019 Oct;15(10):1845-1847. doi: 10.1080/15548627.2019.1637642. Epub 2019 Jul 4. PMID: 31251109; PMCID: PMC6735490.
+
+Han, L., Zhao, X., Benton, M.L., et al. Functional annotation of rare structural variation in the human brain. Nat Commun 11, 2990 (2020). https://doi.org/10.1038/s41467-020-16736-1
