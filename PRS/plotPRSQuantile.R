@@ -33,6 +33,9 @@ OUT = opt$OUT
 
 
 # ======================= functions ========================================== #
+
+# !!!!! for now covariates and covar names are hard coded
+# TODO: fix this
 # ------------------- compareQuantileToMedian --------------------- #
 compareQuantileToMedian <- function( dat, median, quantile )
   # input: dat (data.frame), the df containing the PRS scores, covariates, pheno type, and
