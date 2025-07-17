@@ -34,4 +34,4 @@ then
 	exit 1
 fi
 
-bcftools view ${INFILE} -R $SNPLST | bcftools query -f '%CHROM\t%POS\t%ID\t[%DS\t]\n' > $OUTFILE
+bcftools view ${INFILE} -R $SNPLST | bcftools query -f '%CHROM\t%POS\t%ID\t[%DS\t]\n' -H > $OUTFILE
